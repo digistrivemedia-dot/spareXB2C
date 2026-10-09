@@ -1,0 +1,26 @@
+import type { Fitment, FitStatus } from "@/features/catalog/types";
+import type { VehicleRef } from "@/features/vehicles/types";
+
+export function getFitStatus(
+  fitment: Fitment,
+  bike: Pick<VehicleRef, "modelId" | "variantId" | "year">,
+): FitStatus {
+  if (fitment.kind === "universal") return "universal";
+
+  const fits = fitment.vehicles.some(
+    (vehicle) =>
+      vehicle.modelId === bike.modelId &&
+      vehicle.years.includes(bike.year) &&
+      (vehicle.variantIds === null || vehicle.variantIds.includes(bike.variantId)),
+  );
+  return fits ? "fits" : "no-fit";
+}
+
+/** [2025, 2024, 2023, 2022] → "2022–2025"; gaps are listed: [2025, 2022] → "2022, 2025". */
+export function formatYears(years: number[]): string {
+  const sorted = [...years].sort((a, b) => a - b);
+  const isRange = sorted.every((year, i) => i === 0 || year === sorted[i - 1] + 1);
+  return isRange && sorted.length > 1
+    ? `${sorted[0]}–${sorted[sorted.length - 1]}`
+    : sorted.join(", ");
+}
