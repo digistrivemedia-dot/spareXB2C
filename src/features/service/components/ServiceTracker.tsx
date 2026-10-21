@@ -7,22 +7,33 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Stepper } from "@/components/ui/Stepper";
 import type { ServiceJob } from "@/features/service/types";
 import { getServiceProgress } from "@/features/service/utils";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatDay } from "@/lib/format";
 
 /** Live progress of the service in the garage right now. */
 export function ServiceTracker({ job }: { job: ServiceJob }) {
   const { steps, activeStep } = getServiceProgress(job);
   const isWaitingForCustomer = job.stage === "awaiting-approval";
+  const isRequested = job.stage === "requested";
 
   return (
     <Card aria-labelledby="service-tracker-heading">
-      <SectionHeader id="service-tracker-heading" title="Service in progress" />
+      <SectionHeader
+        id="service-tracker-heading"
+        title={isRequested ? "Booking sent" : "Service in progress"}
+      />
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3 text-sm text-gray-700">
         <p className="flex items-center gap-1.5">
           <MapPin className="size-4 text-gray-500" aria-hidden />
           {job.garage.name} · {job.serviceType}
-          {job.isPickupAndDrop && " · Pickup and drop"}
         </p>
+        {isRequested && (
+          <p>
+            Waiting for the garage to confirm{" "}
+            <span className="font-semibold text-gray-900">
+              {formatDay(new Date(`${job.scheduledOn}T12:00:00+05:30`))}
+            </span>
+          </p>
+        )}
         {job.expectedReadyAt && (
           <p>
             Expected ready by{" "}

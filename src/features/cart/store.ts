@@ -4,6 +4,7 @@ import { persist } from "zustand/middleware";
 import type { CartItem } from "@/features/cart/types";
 import type { ProductSummary } from "@/features/catalog/types";
 import type { Coupon } from "@/features/promotions/types";
+import { features } from "@/lib/config";
 import { MAX_QUANTITY_PER_ITEM } from "@/lib/constants";
 
 type CartState = {
@@ -12,23 +13,15 @@ type CartState = {
   coupon: Coupon | null;
   /** False until the saved cart has been read from localStorage. */
   hasHydrated: boolean;
-  addItem: (
-    product: ProductSummary,
-    options?: { quantity?: number; withInstallation?: boolean },
-  ) => void;
+  addItem: (product: ProductSummary, quantity?: number) => void;
   setQuantity: (productId: string, quantity: number) => void;
-  setInstallation: (productId: string, withInstallation: boolean) => void;
   removeItem: (productId: string) => void;
   applyCoupon: (coupon: Coupon) => void;
   removeCoupon: () => void;
   clear: () => void;
 };
 
-function toCartItem(
-  product: ProductSummary,
-  quantity: number,
-  withInstallation: boolean,
-): CartItem {
+function toCartItem(product: ProductSummary, quantity: number): CartItem {
   return {
     productId: product.id,
     slug: product.slug,
@@ -40,8 +33,6 @@ function toCartItem(
     stockQuantity: product.stockQuantity,
     fitment: product.fitment,
     quantity,
-    isInstallable: product.isInstallable,
-    withInstallation,
   };
 }
 
@@ -60,17 +51,16 @@ export const useCartStore = create<CartState>()(
       items: [],
       coupon: null,
       hasHydrated: false,
-      addItem: (product, { quantity = 1, withInstallation = false } = {}) =>
+      addItem: (product, quantity = 1) =>
         set(({ items }) => {
           const existing = items.find((item) => item.productId === product.id);
           if (!existing) {
             const firstQuantity = clampQuantity(quantity, product.stockQuantity);
-            return { items: [...items, toCartItem(product, firstQuantity, withInstallation)] };
+            return { items: [...items, toCartItem(product, firstQuantity)] };
           }
           return {
             items: updateItem(items, product.id, {
               quantity: clampQuantity(existing.quantity + quantity, existing.stockQuantity),
-              withInstallation: existing.withInstallation || withInstallation,
             }),
           };
         }),
@@ -84,8 +74,6 @@ export const useCartStore = create<CartState>()(
             }),
           };
         }),
-      setInstallation: (productId, withInstallation) =>
-        set(({ items }) => ({ items: updateItem(items, productId, { withInstallation }) })),
       removeItem: (productId) =>
         set(({ items }) => ({ items: items.filter((item) => item.productId !== productId) })),
       applyCoupon: (coupon) => set({ coupon }),
@@ -101,6 +89,9 @@ export const useCartStore = create<CartState>()(
     },
   ),
 );
+
+/** The applied coupon, or none while coupons are switched off (a saved one is then ignored). */
+export const selectCoupon = (state: CartState) => (features.coupons ? state.coupon : null);
 
 export const selectCartCount = (state: CartState) =>
   state.items.reduce((sum, item) => sum + item.quantity, 0);

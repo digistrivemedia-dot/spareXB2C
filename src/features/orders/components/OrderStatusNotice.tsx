@@ -1,15 +1,35 @@
-import { RotateCcw, XCircle } from "lucide-react";
+import { Clock, XCircle } from "lucide-react";
+import Link from "next/link";
 
+import { Button } from "@/components/ui/button";
 import type { Order } from "@/features/orders/types";
-import { paymentMethodLabel } from "@/features/orders/utils";
+import { getPaymentLabel } from "@/features/orders/utils";
 import { formatPrice } from "@/lib/format";
 
-/** Explains a cancelled order or a pending return, including what happens to the money. */
+/** Explains an unpaid or cancelled order, including what happens to the money. */
 export function OrderStatusNotice({ order }: { order: Order }) {
+  if (order.status === "payment-pending") {
+    return (
+      <div
+        role="status"
+        className="flex flex-wrap items-center gap-3 rounded-xl border border-warning-500 bg-warning-50 p-4 text-sm"
+      >
+        <Clock className="size-5 shrink-0 text-warning-700" aria-hidden />
+        <p className="flex-1 text-gray-900">
+          <span className="font-semibold">Waiting for payment.</span> The order is placed as soon as
+          you pay {formatPrice(order.pricing.totalInPaise)}.
+        </p>
+        <Button asChild size="sm">
+          <Link href={`/checkout/payment?order=${order.id}`}>Complete payment</Link>
+        </Button>
+      </div>
+    );
+  }
+
   if (order.status === "cancelled") {
     const refund =
       order.payment.status === "refunded"
-        ? `${formatPrice(order.pricing.totalInPaise)} is refunded to your ${paymentMethodLabel[order.payment.method]} account within 5–7 working days.`
+        ? `${formatPrice(order.pricing.totalInPaise)} is refunded to your ${getPaymentLabel(order.payment)} account within 5–7 working days.`
         : "No payment was taken.";
     return (
       <div
@@ -23,27 +43,6 @@ export function OrderStatusNotice({ order }: { order: Order }) {
             <p className="text-gray-700">Reason: {order.cancellationReason}</p>
           )}
           <p className="text-gray-700">{refund}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (order.status === "return-requested") {
-    return (
-      <div
-        role="status"
-        className="flex gap-3 rounded-xl border border-warning-500 bg-warning-50 p-4 text-sm"
-      >
-        <RotateCcw className="mt-0.5 size-5 shrink-0 text-warning-700" aria-hidden />
-        <div>
-          <p className="font-semibold text-gray-900">Return requested</p>
-          {order.cancellationReason && (
-            <p className="text-gray-700">Reason: {order.cancellationReason}</p>
-          )}
-          <p className="text-gray-700">
-            We&apos;ll call you to arrange the pickup. Your refund starts once the parts are
-            checked.
-          </p>
         </div>
       </div>
     );

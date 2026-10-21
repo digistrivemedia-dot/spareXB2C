@@ -6,6 +6,7 @@ import { getSession } from "@/features/auth/session";
 import { type CheckoutValues, checkoutSchema } from "@/features/checkout/schema";
 import { placeOrder } from "@/features/orders/api";
 import type { OrderAddress, PlaceOrderInput } from "@/features/orders/types";
+import { features } from "@/lib/config";
 
 type PlaceOrderResult = { ok: true; orderId: string } | { ok: false; message: string };
 
@@ -24,6 +25,9 @@ export async function placeOrderAction(
   const parsed = checkoutSchema.safeParse(values);
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0].message };
   const form = parsed.data;
+  if (form.paymentMode === "cod" && !features.cashOnDelivery) {
+    return { ok: false, message: "Cash on delivery isn't available. Please pay online." };
+  }
 
   const saved = await getAddresses();
   const findSaved = (id: string): OrderAddress | undefined => {
@@ -31,7 +35,7 @@ export async function placeOrderAction(
     return address && toOrderAddress(address);
   };
 
-  const delivery = form.addressId === "new" ? form.newAddress : findSaved(form.addressId);
+  const delivery = form.addressId === "new" ? form.address : findSaved(form.addressId);
   if (!delivery) return { ok: false, message: "Please choose a delivery address again." };
   const billing = form.billingSameAsDelivery
     ? delivery
@@ -43,8 +47,8 @@ export async function placeOrderAction(
       deliveryAddress: delivery,
       billingAddress: billing,
       gstin: form.wantsGstInvoice ? form.gstin : null,
-      bikeId: form.bikeId || null,
-      paymentMethod: form.paymentMethod,
+      vehicleId: form.vehicleId || null,
+      paymentMode: form.paymentMode,
     });
     return { ok: true, orderId: order.id };
   } catch (error) {

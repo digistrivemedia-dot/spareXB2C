@@ -2,28 +2,28 @@ import { CalendarPlus, Phone, ShoppingBag } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
-import { ShopForBikeLink } from "@/features/vehicles/components/ShopForBikeLink";
-import type { MyBike } from "@/features/vehicles/types";
+import { ShopForVehicleLink } from "@/features/vehicles/components/ShopForVehicleLink";
+import type { MyVehicle } from "@/features/vehicles/types";
 import { BREAKDOWN_PHONE } from "@/lib/constants";
 import { formatMobile } from "@/lib/format";
 
 // Same height for all three; labels may wrap in the narrow three-column layout on tablets.
 const actionSize = "h-full min-h-14 px-4 py-2 whitespace-normal";
 
-export function QuickActions({ bike }: { bike: MyBike }) {
+export function QuickActions({ vehicle }: { vehicle: MyVehicle }) {
   return (
     <nav aria-label="Quick actions" className="grid gap-3 sm:grid-cols-3">
       <Button asChild size="lg" className={actionSize}>
-        <Link href="/services/book">
+        <Link href={`/services/book?vehicle=${vehicle.id}`}>
           <CalendarPlus aria-hidden />
           Book a service
         </Link>
       </Button>
       <Button asChild size="lg" variant="secondary" className={actionSize}>
-        <ShopForBikeLink bike={bike}>
+        <ShopForVehicleLink vehicle={vehicle}>
           <ShoppingBag aria-hidden />
-          Shop parts for this bike
-        </ShopForBikeLink>
+          Shop parts for this vehicle
+        </ShopForVehicleLink>
       </Button>
       <Button asChild size="lg" variant="destructive" className={actionSize}>
         <a href={`tel:+91${BREAKDOWN_PHONE}`}>

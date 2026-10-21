@@ -41,7 +41,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# private project notes (client brief and open decisions), not part of the site
+# private project notes (client brief, screen list and open decisions), not part of the site
 CLAUDE.md
 AGENTS.md
 decision.md
+b2cscreens.md

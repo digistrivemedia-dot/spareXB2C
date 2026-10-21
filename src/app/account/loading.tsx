@@ -1,7 +1,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProductRailSkeleton } from "@/features/catalog/components/ProductRailSkeleton";
 
-/** Matches the bike dashboard: greeting, bike card, quick actions, tracker and cards. */
+/** Matches the vehicle dashboard: greeting, vehicle card, quick actions, tracker and cards. */
 export default function AccountLoading() {
   return (
     <div className="grid grid-cols-1 gap-6" aria-busy="true" aria-label="Loading">

@@ -1,10 +1,14 @@
 import type {
-  AddBikeInput,
-  MyBike,
+  AddVehicleInput,
+  DocumentStatus,
+  MyVehicle,
+  UpdateVehicleInput,
   VehicleBrand,
   VehicleCatalog,
+  VehicleDocument,
   VehicleModel,
 } from "@/features/vehicles/types";
+import { toIndianIsoDate } from "@/lib/format";
 
 const brands: VehicleBrand[] = [
   { id: "hero", name: "Hero" },
@@ -15,6 +19,13 @@ const brands: VehicleBrand[] = [
   { id: "ktm", name: "KTM" },
   { id: "yamaha", name: "Yamaha" },
   { id: "suzuki", name: "Suzuki" },
+  { id: "maruti-suzuki", name: "Maruti Suzuki" },
+  { id: "hyundai", name: "Hyundai" },
+  { id: "tata", name: "Tata" },
+  { id: "mahindra", name: "Mahindra" },
+  { id: "toyota", name: "Toyota" },
+  { id: "ashok-leyland", name: "Ashok Leyland" },
+  { id: "piaggio", name: "Piaggio" },
 ];
 
 const recentYears = [2025, 2024, 2023, 2022];
@@ -70,13 +81,46 @@ const vehicleModels: VehicleModel[] = [
   model("yamaha-fascino", "yamaha", "Fascino", "scooter", ["125 Drum", "125 Disc"]),
   model("suzuki-access-125", "suzuki", "Access 125", "scooter", ["Drum", "Disc"]),
   model("suzuki-gixxer", "suzuki", "Gixxer", "bike", ["STD", "Dual Tone"]),
+
+  model("maruti-swift", "maruti-suzuki", "Swift", "car", ["LXi", "VXi", "ZXi"]),
+  model("maruti-baleno", "maruti-suzuki", "Baleno", "car", ["Delta", "Zeta"]),
+  model("maruti-wagon-r", "maruti-suzuki", "Wagon R", "car", ["LXi", "VXi CNG"]),
+  model("hyundai-i20", "hyundai", "i20", "car", ["Magna", "Sportz"]),
+  model("hyundai-creta", "hyundai", "Creta", "car", ["E", "SX"]),
+  model("tata-nexon", "tata", "Nexon", "car", ["Smart", "Creative"]),
+  model("tata-punch", "tata", "Punch", "car", ["Pure", "Adventure"]),
+  model("mahindra-scorpio-n", "mahindra", "Scorpio-N", "car", ["Z4", "Z8"]),
+  model("honda-city", "honda", "City", "car", ["V", "VX"]),
+  model("toyota-innova-crysta", "toyota", "Innova Crysta", "car", ["GX", "VX"]),
+
+  model("tata-ace-gold", "tata", "Ace Gold", "commercial", ["Petrol", "Diesel"]),
+  model("tata-intra-v30", "tata", "Intra V30", "commercial", ["STD"]),
+  model("mahindra-bolero-pik-up", "mahindra", "Bolero Pik-Up", "commercial", ["1.3 T", "1.7 T"]),
+  model("ashok-leyland-dost-plus", "ashok-leyland", "Dost+", "commercial", ["LS", "XL"]),
+  model("bajaj-re-compact", "bajaj", "RE Compact", "commercial", ["CNG", "LPG"]),
+  model("piaggio-ape-city", "piaggio", "Ape City", "commercial", ["Plus", "Xtra"]),
 ];
 
 export const vehicleCatalog: VehicleCatalog = { brands, models: vehicleModels };
 
-const myBikes: MyBike[] = [
+function document(
+  kind: VehicleDocument["kind"],
+  details: Partial<Omit<VehicleDocument, "kind">> = {},
+): VehicleDocument {
+  return {
+    kind,
+    number: null,
+    provider: null,
+    expiresOn: null,
+    status: "missing",
+    photo: null,
+    ...details,
+  };
+}
+
+const myVehicles: MyVehicle[] = [
   {
-    id: "bike-ktm-duke-200",
+    id: "vehicle-ktm-duke-200",
     modelId: "ktm-duke-200",
     variantId: "ktm-duke-200-std",
     year: 2023,
@@ -87,11 +131,21 @@ const myBikes: MyBike[] = [
     registrationNumber: "KA03MX4521",
     odometerKm: 18420,
     odometerUpdatedAt: "2026-10-02T09:30:00+05:30",
-    imageUrl: "/images/bikes/ktm-duke-200.jpg",
+    photos: [{ url: "/images/vehicles/ktm-duke-200.jpg", alt: "KTM Duke 200, side view" }],
+    documents: [
+      document("insurance", {
+        number: "3005/27931454/10/000",
+        provider: "ICICI Lombard",
+        expiresOn: "2026-12-15",
+        status: "ok",
+      }),
+      document("puc", { number: "KA0300910452", expiresOn: "2026-11-05", status: "due-soon" }),
+      document("rc", { expiresOn: "2038-03-14", status: "ok" }),
+    ],
     isDefault: true,
   },
   {
-    id: "bike-honda-activa-6g",
+    id: "vehicle-honda-activa-6g",
     modelId: "honda-activa-6g",
     variantId: "honda-activa-6g-dlx",
     year: 2021,
@@ -102,42 +156,113 @@ const myBikes: MyBike[] = [
     registrationNumber: "KA53HE7782",
     odometerKm: 22150,
     odometerUpdatedAt: "2026-09-18T18:10:00+05:30",
-    imageUrl: "/images/bikes/honda-activa-6g.jpg",
+    photos: [{ url: "/images/vehicles/honda-activa-6g.jpg", alt: "Honda Activa 6G, parked" }],
+    documents: [
+      document("insurance", {
+        number: "OG-22-1901-1801-00004412",
+        provider: "Bajaj Allianz",
+        expiresOn: "2026-09-30",
+        status: "overdue",
+      }),
+      document("puc", { number: "KA5300228815", expiresOn: "2027-01-12", status: "ok" }),
+      document("rc", { expiresOn: "2036-07-21", status: "ok" }),
+    ],
+    isDefault: false,
+  },
+  {
+    id: "vehicle-maruti-swift",
+    modelId: "maruti-swift",
+    variantId: "maruti-swift-vxi",
+    year: 2022,
+    brandName: "Maruti Suzuki",
+    modelName: "Swift",
+    variantName: "VXi",
+    type: "car",
+    registrationNumber: "KA05NG2231",
+    odometerKm: 31260,
+    odometerUpdatedAt: "2026-10-12T11:00:00+05:30",
+    photos: [],
+    documents: [
+      document("insurance", {
+        number: "P0022100003/4103/100512",
+        provider: "Tata AIG",
+        expiresOn: "2027-04-02",
+        status: "ok",
+      }),
+      document("puc"),
+      document("rc", { expiresOn: "2037-04-01", status: "ok" }),
+    ],
     isDefault: false,
   },
 ];
 
+const DUE_SOON_DAYS = 30;
+
+/** Status from the expiry date; the real backend decides this (rules in decision.md, C3). */
+function documentStatus(expiresOn: string | null): DocumentStatus {
+  if (!expiresOn) return "missing";
+  const today = toIndianIsoDate(new Date());
+  if (expiresOn < today) return "overdue";
+  const soon = toIndianIsoDate(new Date(Date.now() + DUE_SOON_DAYS * 86_400_000));
+  return expiresOn <= soon ? "due-soon" : "ok";
+}
+
+const find = (id: string) => myVehicles.find((vehicle) => vehicle.id === id);
+
+// Demo data lives in memory, so new vehicles and changes last until the server restarts.
 export const mockVehicles = {
   async getVehicleCatalog(): Promise<VehicleCatalog> {
     return vehicleCatalog;
   },
 
-  async getMyBikes(): Promise<MyBike[]> {
-    return myBikes;
+  async getMyVehicles(): Promise<MyVehicle[]> {
+    return [...myVehicles].sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
   },
 
-  async getMyBike(id: string): Promise<MyBike | null> {
-    return myBikes.find((bike) => bike.id === id) ?? null;
+  async getMyVehicle(id: string): Promise<MyVehicle | null> {
+    return find(id) ?? null;
   },
 
-  // Demo data lives in memory, so new bikes and updates last until the server restarts.
-  async addMyBike(input: AddBikeInput): Promise<MyBike> {
-    const bike: MyBike = {
+  async addMyVehicle(input: AddVehicleInput): Promise<MyVehicle> {
+    const vehicle: MyVehicle = {
       ...input,
-      id: `bike-${input.modelId}-${myBikes.length + 1}`,
-      type: vehicleModels.find((m) => m.id === input.modelId)?.type ?? "bike",
+      id: `vehicle-${input.modelId}-${Date.now()}`,
       odometerUpdatedAt: new Date().toISOString(),
-      imageUrl: null,
-      isDefault: myBikes.length === 0,
+      photos: [],
+      documents: [document("insurance"), document("puc"), document("rc")],
+      isDefault: myVehicles.length === 0,
     };
-    myBikes.push(bike);
-    return bike;
+    myVehicles.push(vehicle);
+    return vehicle;
   },
 
-  async updateOdometer(id: string, odometerKm: number): Promise<MyBike | null> {
-    const bike = myBikes.find((b) => b.id === id);
-    if (!bike) return null;
-    Object.assign(bike, { odometerKm, odometerUpdatedAt: new Date().toISOString() });
-    return bike;
+  async updateMyVehicle(id: string, input: UpdateVehicleInput): Promise<MyVehicle | null> {
+    const vehicle = find(id);
+    if (!vehicle) return null;
+    Object.assign(vehicle, {
+      registrationNumber: input.registrationNumber,
+      photos: input.photos,
+      documents: input.documents.map((d) => ({ ...d, status: documentStatus(d.expiresOn) })),
+    });
+    return vehicle;
+  },
+
+  async updateOdometer(id: string, odometerKm: number): Promise<MyVehicle | null> {
+    const vehicle = find(id);
+    if (!vehicle) return null;
+    Object.assign(vehicle, { odometerKm, odometerUpdatedAt: new Date().toISOString() });
+    return vehicle;
+  },
+
+  async setDefaultVehicle(id: string): Promise<void> {
+    if (!find(id)) return;
+    myVehicles.forEach((vehicle) => (vehicle.isDefault = vehicle.id === id));
+  },
+
+  async removeMyVehicle(id: string): Promise<void> {
+    const index = myVehicles.findIndex((vehicle) => vehicle.id === id);
+    if (index === -1) return;
+    const [removed] = myVehicles.splice(index, 1);
+    if (removed.isDefault && myVehicles.length > 0) myVehicles[0].isDefault = true;
   },
 };

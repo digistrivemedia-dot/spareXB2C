@@ -7,11 +7,11 @@ import { useRouter } from "next/navigation";
 import { VehiclePicker } from "@/features/vehicles/components/VehiclePicker";
 import { useVehicleStore } from "@/features/vehicles/store";
 import type { VehicleCatalog, VehicleRef } from "@/features/vehicles/types";
-import { getBikeName, getBikePartsHref } from "@/features/vehicles/utils";
+import { getVehicleName, getVehiclePartsHref } from "@/features/vehicles/utils";
 import { cn } from "@/lib/utils";
 
 const promises = [
-  "Fit checked for over 20 popular bikes and scooters",
+  "Fit checked for popular bikes, scooters, cars and commercial vehicles",
   "Genuine brands with a GST invoice",
   "Free delivery on orders above ₹499",
 ];
@@ -21,15 +21,15 @@ type VehicleFinderProps = {
   className?: string;
 };
 
-/** Home page hero: pick a bike and jump to the parts that fit it. */
+/** Home page hero: pick a vehicle and jump to the parts that fit it. */
 export function VehicleFinder({ catalog, className }: VehicleFinderProps) {
   const router = useRouter();
-  const selectedBike = useVehicleStore((state) => state.selectedBike);
-  const selectBike = useVehicleStore((state) => state.selectBike);
+  const selectedVehicle = useVehicleStore((state) => state.selectedVehicle);
+  const selectVehicle = useVehicleStore((state) => state.selectVehicle);
 
   function findParts(vehicle: VehicleRef) {
-    selectBike({ ...vehicle, myBikeId: null });
-    router.push(getBikePartsHref(vehicle));
+    selectVehicle({ ...vehicle, myVehicleId: null });
+    router.push(getVehiclePartsHref(vehicle));
   }
 
   return (
@@ -39,16 +39,18 @@ export function VehicleFinder({ catalog, className }: VehicleFinderProps) {
         className,
       )}
     >
-      <h1 className="text-2xl font-semibold text-gray-900 md:text-3xl">Parts that fit your bike</h1>
+      <h1 className="text-2xl font-semibold text-gray-900 md:text-3xl">
+        Parts that fit your vehicle
+      </h1>
       <p className="mt-2 text-sm text-gray-600 md:text-base">
-        Choose your bike once. Every part will show whether it fits.
+        Choose your vehicle once. Every part will show whether it fits.
       </p>
-      {selectedBike && (
+      {selectedVehicle && (
         <Link
-          href={getBikePartsHref(selectedBike)}
+          href={getVehiclePartsHref(selectedVehicle)}
           className="mt-4 flex items-center justify-between gap-3 rounded-lg bg-navy-50 px-4 py-3 text-sm font-semibold text-navy-800 hover:bg-navy-100"
         >
-          <span>Shop parts for your {getBikeName(selectedBike)}</span>
+          <span>Shop parts for your {getVehicleName(selectedVehicle)}</span>
           <ArrowRight className="size-4 shrink-0" aria-hidden />
         </Link>
       )}

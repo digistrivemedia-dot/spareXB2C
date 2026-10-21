@@ -1,14 +1,72 @@
 import type { StatusTone } from "@/components/ui/StatusBadge";
 import type { Step } from "@/components/ui/Stepper";
 import type {
-  BikeReminders,
+  Estimate,
+  EstimateLine,
+  EstimateLineKind,
   Garage,
   ReminderStatus,
   ServiceJob,
   ServiceStage,
   Weekday,
 } from "@/features/service/types";
-import { formatDate, formatDateTime, formatKm } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
+
+export const serviceStageLabel: Record<ServiceStage, string> = {
+  requested: "Waiting for the garage",
+  booked: "Booked",
+  inspected: "Inspected",
+  "awaiting-approval": "Your approval needed",
+  "in-service": "In service",
+  ready: "Ready to collect",
+  delivered: "Delivered",
+  declined: "Declined by the garage",
+  cancelled: "Cancelled",
+};
+
+export const serviceStageTone: Record<ServiceStage, StatusTone> = {
+  requested: "warning",
+  booked: "info",
+  inspected: "info",
+  "awaiting-approval": "warning",
+  "in-service": "info",
+  ready: "success",
+  delivered: "success",
+  declined: "danger",
+  cancelled: "neutral",
+};
+
+// Once the work has started, the customer talks to the garage instead of cancelling in the app.
+const cancellableStages: ServiceStage[] = ["requested", "booked", "inspected", "awaiting-approval"];
+
+export function canCancelBooking(job: ServiceJob): boolean {
+  return cancellableStages.includes(job.stage);
+}
+
+/** The estimate waiting for the customer's answer, if any. */
+export function getPendingEstimate(job: ServiceJob): Estimate | null {
+  return job.estimates.find((estimate) => estimate.decidedAt === null) ?? null;
+}
+
+/** An estimate's total, or the total of the lines matching `decision`. */
+export function getEstimateTotal(estimate: Estimate, decision?: EstimateLine["decision"]): number {
+  return estimate.lines
+    .filter((line) => !decision || line.decision === decision)
+    .reduce((sum, line) => sum + line.amountInPaise, 0);
+}
+
+export const estimateLineKindLabel: Record<EstimateLineKind, string> = {
+  labour: "Labour",
+  parts: "Parts",
+  consumables: "Consumables",
+};
+
+export const cancelBookingReasons = [
+  "My plans changed",
+  "I booked the wrong day or garage",
+  "The problem got sorted",
+  "Other",
+];
 
 export const reminderTone: Record<ReminderStatus, StatusTone> = {
   ok: "success",
@@ -16,59 +74,9 @@ export const reminderTone: Record<ReminderStatus, StatusTone> = {
   overdue: "danger",
 };
 
-export type ReminderItem = {
-  key: string;
-  title: string;
-  value: string;
-  status: ReminderStatus;
-  statusLabel: string;
-};
-
-/** The four things a rider must keep on top of, in display order. */
-export function getReminderItems({
-  nextService,
-  insurance,
-  puc,
-  rc,
-}: BikeReminders): ReminderItem[] {
-  const documentStatus = { ok: "Valid", "due-soon": "Renew soon", overdue: "Expired" } as const;
-  return [
-    {
-      key: "service",
-      title: "Next service",
-      value: `${formatDate(nextService.dueOn)} or ${formatKm(nextService.dueAtKm)}`,
-      status: nextService.status,
-      statusLabel: { ok: "On track", "due-soon": "Due soon", overdue: "Overdue" }[
-        nextService.status
-      ],
-    },
-    {
-      key: "insurance",
-      title: "Insurance",
-      value: `${insurance.provider} · till ${formatDate(insurance.expiresOn)}`,
-      status: insurance.status,
-      statusLabel: documentStatus[insurance.status],
-    },
-    {
-      key: "puc",
-      title: "PUC",
-      value: `Till ${formatDate(puc.expiresOn)}`,
-      status: puc.status,
-      statusLabel: documentStatus[puc.status],
-    },
-    {
-      key: "rc",
-      title: "RC",
-      value: `Till ${formatDate(rc.expiresOn)}`,
-      status: rc.status,
-      statusLabel: documentStatus[rc.status],
-    },
-  ];
-}
-
 // The customer sees five stages; "ready" and "delivered" share the last one.
 const trackerSteps: { label: string; stages: ServiceStage[] }[] = [
-  { label: "Booked", stages: ["booked"] },
+  { label: "Booked", stages: ["requested", "booked"] },
   { label: "Inspected", stages: ["inspected"] },
   { label: "Your approval", stages: ["awaiting-approval"] },
   { label: "In service", stages: ["in-service"] },
@@ -90,8 +98,18 @@ export function getServiceProgress(job: ServiceJob): { steps: Step[]; activeStep
 
 const weekdays: Weekday[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
+/** 0.4 → "Under 1 km", 5.5 → "5.5 km" */
+export function formatDistance(km: number): string {
+  return km < 1 ? "Under 1 km" : `${km} km`;
+}
+
+/** The garage's own starting price for a service, or null when it doesn't offer it. */
+export function getGaragePrice(garage: Garage, serviceTypeId: string): number | null {
+  return garage.services.find((s) => s.serviceTypeId === serviceTypeId)?.fromPriceInPaise ?? null;
+}
+
 /** "14:00" → "2:00 PM" */
-export function formatTime(time: string): string {
+function formatTime(time: string): string {
   const [hours, minutes] = time.split(":").map(Number);
   const suffix = hours < 12 ? "AM" : "PM";
   return `${hours % 12 || 12}:${String(minutes).padStart(2, "0")} ${suffix}`;

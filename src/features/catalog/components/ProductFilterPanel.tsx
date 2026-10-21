@@ -113,12 +113,6 @@ export function ProductFilterPanel({ filters, facets }: ProductFilterPanelProps)
         {checkbox("stock", "In stock only", filters.inStock, (inStock) => apply({ inStock }))}
       </FilterGroup>
 
-      <FilterGroup title="Customer rating">
-        {checkbox("rating", "4★ & above", filters.minRating === 4, (on) =>
-          apply({ minRating: on ? 4 : undefined }),
-        )}
-      </FilterGroup>
-
       <FilterGroup title="Discount">
         <RadioGroup
           value={filters.minDiscount?.toString() ?? "any"}

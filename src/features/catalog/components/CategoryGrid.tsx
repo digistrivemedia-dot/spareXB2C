@@ -30,7 +30,13 @@ const categoryIcons: Record<string, LucideIcon> = {
   "riding-gear": HardHat,
 };
 
-export function CategoryGrid({ categories }: { categories: Category[] }) {
+type CategoryGridProps = {
+  categories: Category[];
+  /** Parts per category slug, shown under each name when given. */
+  counts?: Record<string, number>;
+};
+
+export function CategoryGrid({ categories, counts }: CategoryGridProps) {
   return (
     <ul className="grid grid-cols-2 gap-3 md:grid-cols-5 md:gap-4">
       {categories.map((category) => {
@@ -44,7 +50,14 @@ export function CategoryGrid({ categories }: { categories: Category[] }) {
               <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-navy-50 text-navy-700 md:size-12">
                 <Icon className="size-5 md:size-6" aria-hidden />
               </span>
-              {category.name}
+              <span className="grid gap-0.5">
+                {category.name}
+                {counts && (
+                  <span className="text-xs font-normal text-gray-500">
+                    {counts[category.slug] ?? 0} {counts[category.slug] === 1 ? "part" : "parts"}
+                  </span>
+                )}
+              </span>
             </Link>
           </li>
         );

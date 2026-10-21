@@ -1,40 +1,41 @@
-import { SearchX } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { Container } from "@/components/layout/Container";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
-import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { Pagination } from "@/components/ui/Pagination";
 import { getSession } from "@/features/auth/session";
 import { getBrands, getCategories, getProductFacets, getProducts } from "@/features/catalog/api";
 import { ActiveFilterChips } from "@/features/catalog/components/ActiveFilterChips";
 import { FitBar } from "@/features/catalog/components/FitBar";
+import { ListingEmptyState } from "@/features/catalog/components/ListingEmptyState";
 import { MobileFilters } from "@/features/catalog/components/MobileFilters";
 import { ProductFilterPanel } from "@/features/catalog/components/ProductFilterPanel";
 import { ProductGrid } from "@/features/catalog/components/ProductGrid";
 import { SortSelect } from "@/features/catalog/components/SortSelect";
 import {
-  clearedFilters,
   countActiveFilters,
   getListingTitle,
   parseProductFilters,
   productsHref,
   toProductQuery,
 } from "@/features/catalog/filters";
-import { getMyBikes, getVehicleCatalog } from "@/features/vehicles/api";
-import { parseBikeParam } from "@/features/vehicles/utils";
+import { getMyVehicles, getVehicleCatalog } from "@/features/vehicles/api";
+import { parseVehicleParam } from "@/features/vehicles/utils";
 import type { SearchParams } from "@/lib/search-params";
 
-/** Filters from the URL, plus the category and bike they refer to; shared by the page and its metadata. */
+/** Filters from the URL, plus the category and vehicle they refer to; shared by the page and its metadata. */
 async function resolveListing(searchParams: SearchParams) {
   const filters = parseProductFilters(searchParams);
   const [categories, vehicleCatalog] = await Promise.all([getCategories(), getVehicleCatalog()]);
   const category = categories.find((c) => c.slug === filters.category);
-  const fitBike =
-    filters.fits && filters.bike ? parseBikeParam(filters.bike, vehicleCatalog) : null;
-  return { filters, fitBike, title: getListingTitle(filters, category?.name, fitBike) };
+  const fitVehicle =
+    filters.fits && filters.vehicle ? parseVehicleParam(filters.vehicle, vehicleCatalog) : null;
+  return {
+    filters,
+    fitVehicle,
+    categoryName: category?.name,
+    title: getListingTitle(filters, category?.name, fitVehicle),
+  };
 }
 
 export async function generateMetadata({
@@ -44,21 +45,24 @@ export async function generateMetadata({
   return {
     title,
     description:
-      "Genuine bike and scooter parts, each checked against your bike so you know it fits.",
+      "Genuine parts for bikes, scooters, cars and commercial vehicles, each checked against your vehicle so you know it fits.",
   };
 }
 
 export default async function ProductsPage({ searchParams }: PageProps<"/products">) {
-  const { filters, fitBike, title } = await resolveListing(await searchParams);
-  const query = toProductQuery(filters, fitBike);
+  const { filters, fitVehicle, categoryName, title } = await resolveListing(await searchParams);
+  const query = toProductQuery(filters, fitVehicle);
   const session = await getSession();
-  const [results, facets, brands, myBikes] = await Promise.all([
+  const [results, facets, brands, myVehicles, withoutFit] = await Promise.all([
     getProducts(query),
     getProductFacets(query),
     getBrands(),
-    session ? getMyBikes() : [],
+    session ? getMyVehicles() : [],
+    // Only the count is needed: how many matching parts the fit filter hides.
+    fitVehicle ? getProducts({ ...query, fits: undefined, pageSize: 1 }) : null,
   ]);
-  const isAllParts = !filters.q && !filters.category && !fitBike;
+  const hiddenCount = withoutFit ? withoutFit.total - results.total : 0;
+  const isAllParts = !filters.q && !filters.category && !fitVehicle;
   const totalPages = Math.ceil(results.total / results.pageSize);
   const activeCount = countActiveFilters(filters);
   const first = (results.page - 1) * results.pageSize + 1;
@@ -83,7 +87,12 @@ export default async function ProductsPage({ searchParams }: PageProps<"/product
           {results.total} {results.total === 1 ? "part" : "parts"}
         </p>
       </div>
-      <FitBar filters={filters} fitBike={fitBike} myBikes={myBikes} />
+      <FitBar
+        filters={filters}
+        fitVehicle={fitVehicle}
+        hiddenCount={hiddenCount}
+        myVehicles={myVehicles}
+      />
 
       <div className="flex gap-8">
         <aside aria-label="Filters" className="hidden w-64 shrink-0 lg:block">
@@ -122,17 +131,13 @@ export default async function ProductsPage({ searchParams }: PageProps<"/product
               />
             </>
           ) : (
-            <EmptyState
-              icon={SearchX}
-              title="No parts match these filters"
-              description="Try removing a filter, or search for the part by name or part number."
-            >
-              <Button asChild>
-                <Link href={activeCount > 0 ? productsHref(filters, clearedFilters) : "/products"}>
-                  {activeCount > 0 ? "Clear filters" : "Browse all parts"}
-                </Link>
-              </Button>
-            </EmptyState>
+            <ListingEmptyState
+              filters={filters}
+              fitVehicle={fitVehicle}
+              activeCount={activeCount}
+              categoryName={categoryName}
+              myVehicles={myVehicles}
+            />
           )}
         </div>
       </div>

@@ -1,30 +1,29 @@
 import { Container } from "@/components/layout/Container";
 import { Section } from "@/components/layout/Section";
-import { getCategories, getProducts } from "@/features/catalog/api";
-import { BikeProductRail } from "@/features/catalog/components/BikeProductRail";
+import { getProducts } from "@/features/catalog/api";
 import { CategoryGrid } from "@/features/catalog/components/CategoryGrid";
-import { ProductRail } from "@/features/catalog/components/ProductRail";
 import { TopDealsCard } from "@/features/catalog/components/TopDealsCard";
-import { getBanners } from "@/features/promotions/api";
+import { VehicleProductRail } from "@/features/catalog/components/VehicleProductRail";
+import { getBanners, getHomeFeatures } from "@/features/promotions/api";
 import { BannerCarousel } from "@/features/promotions/components/BannerCarousel";
+import { ProductShelfSection } from "@/features/promotions/components/ProductShelfSection";
 import { PromoStrip } from "@/features/promotions/components/PromoStrip";
 import { TrustStrip } from "@/features/promotions/components/TrustStrip";
 import { ServiceBand } from "@/features/service/components/ServiceBand";
 import { ServiceBookingCard } from "@/features/service/components/ServiceBookingCard";
 import { getVehicleCatalog } from "@/features/vehicles/api";
-import { BikeBrandGrid } from "@/features/vehicles/components/BikeBrandGrid";
+import { VehicleBrandGrid } from "@/features/vehicles/components/VehicleBrandGrid";
 import { VehicleFinder } from "@/features/vehicles/components/VehicleFinder";
 
 export default async function HomePage() {
-  const [heroBanners, stripBanners, categories, vehicleCatalog, bestSellers, topDeals] =
-    await Promise.all([
-      getBanners("home-hero"),
-      getBanners("home-strip"),
-      getCategories(),
-      getVehicleCatalog(),
-      getProducts({ sort: "popular", pageSize: 10 }),
-      getProducts({ sort: "discount", inStock: true, pageSize: 2 }),
-    ]);
+  const [heroBanners, stripBanners, features, vehicleCatalog, topDeals] = await Promise.all([
+    getBanners("home-hero"),
+    getBanners("home-strip"),
+    getHomeFeatures(),
+    getVehicleCatalog(),
+    getProducts({ sort: "discount", inStock: true, pageSize: 2 }),
+  ]);
+  const [firstShelf, ...otherShelves] = features.shelves;
 
   return (
     <>
@@ -39,25 +38,27 @@ export default async function HomePage() {
         </div>
       </Container>
 
-      <Section id="categories" title="Shop by category">
-        <CategoryGrid categories={categories} />
+      <Section
+        id="categories"
+        title="Shop by category"
+        link={{ href: "/categories", label: "All categories" }}
+      >
+        <CategoryGrid categories={features.categories} />
       </Section>
 
-      <BikeProductRail />
+      <VehicleProductRail />
 
       <PromoStrip banners={stripBanners} />
 
-      <Section id="bike-brands" title="Shop by bike brand">
-        <BikeBrandGrid catalog={vehicleCatalog} />
+      {firstShelf && <ProductShelfSection shelf={firstShelf} />}
+
+      <Section id="vehicle-brands" title="Shop by vehicle brand">
+        <VehicleBrandGrid brands={features.vehicleBrands} catalog={vehicleCatalog} />
       </Section>
 
-      <Section
-        id="best-sellers"
-        title="Best sellers"
-        link={{ href: "/products", label: "View all" }}
-      >
-        <ProductRail products={bestSellers.items} label="Best sellers" />
-      </Section>
+      {otherShelves.map((shelf) => (
+        <ProductShelfSection key={shelf.id} shelf={shelf} />
+      ))}
 
       <ServiceBand />
 

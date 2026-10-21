@@ -1,4 +1,4 @@
-import { Truck, Wrench } from "lucide-react";
+import { CalendarCheck, Wrench } from "lucide-react";
 import Link from "next/link";
 
 import { Container } from "@/components/layout/Container";
@@ -15,11 +15,11 @@ export function ServiceBand() {
             </span>
             <div>
               <h2 id="service-band-heading" className="text-lg font-semibold text-white md:text-xl">
-                Service your bike at Kannali Garage
+                Service your vehicle at Kannali Garage
               </h2>
               <p className="mt-1 flex items-center gap-2 text-sm text-gray-200 md:text-base">
-                <Truck className="size-4 shrink-0" aria-hidden />
-                Pickup and drop available across Bengaluru
+                <CalendarCheck className="size-4 shrink-0" aria-hidden />
+                Choose a garage and a date. Nothing to pay when you book.
               </p>
             </div>
           </div>

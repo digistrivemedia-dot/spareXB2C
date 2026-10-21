@@ -1,8 +1,8 @@
-import { CircleHelp, FileText } from "lucide-react";
+import { CircleHelp, FileText, RotateCcw } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
-import { OrderActionDialog } from "@/features/orders/components/OrderActionDialog";
+import { CancelOrderDialog } from "@/features/orders/components/CancelOrderDialog";
 import type { Order } from "@/features/orders/types";
 import { canCancel, canReturn } from "@/features/orders/utils";
 import { formatDate } from "@/lib/format";
@@ -15,7 +15,7 @@ type OrderActionsProps = {
 
 /** What the customer can do with this order right now. */
 export function OrderActions({ order, today }: OrderActionsProps) {
-  const hasInvoice = order.status !== "cancelled";
+  const hasInvoice = order.status !== "cancelled" && order.status !== "payment-pending";
 
   return (
     <div className="grid gap-2">
@@ -28,11 +28,14 @@ export function OrderActions({ order, today }: OrderActionsProps) {
             </Link>
           </Button>
         )}
-        {canCancel(order) && (
-          <OrderActionDialog kind="cancel" orderId={order.id} orderNumber={order.number} />
-        )}
+        {canCancel(order) && <CancelOrderDialog orderId={order.id} orderNumber={order.number} />}
         {canReturn(order, today) && (
-          <OrderActionDialog kind="return" orderId={order.id} orderNumber={order.number} />
+          <Button asChild variant="secondary">
+            <Link href={`/account/orders/${order.id}/return`}>
+              <RotateCcw aria-hidden />
+              Return items
+            </Link>
+          </Button>
         )}
         <Button asChild variant="ghost">
           <Link href="/account/help">
@@ -43,9 +46,9 @@ export function OrderActions({ order, today }: OrderActionsProps) {
       </div>
       {order.status === "delivered" && order.returnableUntil && (
         <p className="text-sm text-gray-600">
-          {canReturn(order, today)
-            ? `Returns accepted until ${formatDate(order.returnableUntil)}.`
-            : `The return window closed on ${formatDate(order.returnableUntil)}.`}
+          {today > order.returnableUntil
+            ? `The return window closed on ${formatDate(order.returnableUntil)}.`
+            : `Returns accepted until ${formatDate(order.returnableUntil)}.`}
         </p>
       )}
     </div>

@@ -15,11 +15,11 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: `${SITE_NAME} · Bike parts that fit, and service you can trust`,
+    default: `${SITE_NAME} · Vehicle parts that fit, and service you can trust`,
     template: `%s · ${SITE_NAME}`,
   },
   description:
-    "Shop genuine bike and scooter parts checked to fit your bike, and book a service at Kannali Garage in Bengaluru.",
+    "Shop genuine vehicle and scooter parts checked to fit your vehicle, and book a service at Kannali Garage in Bengaluru.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

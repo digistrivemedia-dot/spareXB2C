@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 const benefits = [
   {
     icon: Bike,
-    title: "Parts that fit your bike",
+    title: "Parts that fit your vehicle",
     text: "Every part is checked against your exact model and year.",
   },
   {
@@ -16,7 +16,7 @@ const benefits = [
   },
   {
     icon: Wrench,
-    title: "Your bike's service in one place",
+    title: "Your vehicle's service in one place",
     text: "Track services, approve estimates and get reminders.",
   },
 ];

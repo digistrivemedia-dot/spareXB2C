@@ -17,6 +17,6 @@ export function verifyOtp(
   name: string | null,
 ): Promise<OtpVerification | null> {
   return useMock
-    ? mockAuth.verifyOtp(mobile, name)
+    ? mockAuth.verifyOtp(mobile, otp, name)
     : orNull(apiClient.post("/auth/otp/verify", { mobile, otp, name }));
 }

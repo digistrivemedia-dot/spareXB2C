@@ -1,4 +1,5 @@
 import { Clock, MapPin, Navigation, Phone } from "lucide-react";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/Card";
@@ -20,7 +21,12 @@ export function MyGarageCard({ garage, lastVisit }: MyGarageCardProps) {
   return (
     <Card aria-labelledby="my-garage-heading" className="flex flex-col">
       <SectionHeader id="my-garage-heading" title="My garage" />
-      <p className="font-semibold text-gray-900">{garage.name}</p>
+      <Link
+        href={`/services/garages/${garage.slug}`}
+        className="font-semibold text-gray-900 hover:text-navy-700 hover:underline"
+      >
+        {garage.name}
+      </Link>
       <Rating average={garage.rating} count={garage.reviewCount} className="mt-1" />
       <ul className="mt-3 grid gap-2 text-sm text-gray-700">
         <li className="flex gap-2">
@@ -46,9 +52,9 @@ export function MyGarageCard({ garage, lastVisit }: MyGarageCardProps) {
             <span className="sr-only">(opens Google Maps)</span>
           </a>
         </Button>
-        {lastVisit && (
+        {lastVisit && !lastVisit.isRated && (
           <RateVisitDialog
-            recordId={lastVisit.id}
+            jobId={lastVisit.id}
             garageName={garage.name}
             visitDate={lastVisit.completedOn}
           />

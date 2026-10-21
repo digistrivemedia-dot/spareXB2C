@@ -7,11 +7,10 @@ import type {
   ProductFacets,
   ProductQuery,
   ProductSummary,
-  RatingBreakdown,
   RelatedProducts,
-  Review,
 } from "@/features/catalog/types";
 import { getFitStatus } from "@/features/catalog/utils";
+import type { VehicleType } from "@/features/vehicles/types";
 import { getDiscountPercent } from "@/lib/price";
 import type { Paginated } from "@/lib/types";
 import { paginate } from "@/mocks/utils";
@@ -58,7 +57,9 @@ const brands: PartBrand[] = [
 ];
 
 // Fitment helpers: build compatibility from the vehicle master so names and years always match it.
-const universal: Fitment = { kind: "universal" };
+function universal(...vehicleTypes: VehicleType[]): Fitment {
+  return { kind: "universal", vehicleTypes };
+}
 
 function vehicle(
   modelId: string,
@@ -86,14 +87,12 @@ function fits(...vehicles: (string | FitmentVehicle)[]): Fitment {
   };
 }
 
-type ProductSeed = Omit<
-  Product,
-  "id" | "isInstallable" | "sku" | "brand" | "category" | "image" | "images" | "rating"
-> & {
+/** How many have sold, kept in the demo only so "popular" and "relevance" can rank parts. */
+type MockProduct = Product & { soldCount: number };
+
+type ProductSeed = Omit<MockProduct, "id" | "sku" | "brand" | "category" | "image" | "images"> & {
   brandSlug: string;
   categorySlug: string;
-  rating: number;
-  ratingCount: number;
 };
 
 const seeds: ProductSeed[] = [
@@ -106,8 +105,7 @@ const seeds: ProductSeed[] = [
     partNumber: "104097",
     priceInPaise: 89900,
     mrpInPaise: 98000,
-    rating: 4.7,
-    ratingCount: 1240,
+    soldCount: 1240,
     stockQuantity: 64,
     fitment: fits(
       "ktm-duke-200",
@@ -142,8 +140,7 @@ const seeds: ProductSeed[] = [
     partNumber: "3426581",
     priceInPaise: 74900,
     mrpInPaise: 82000,
-    rating: 4.5,
-    ratingCount: 860,
+    soldCount: 860,
     stockQuantity: 48,
     fitment: fits(
       "royal-enfield-classic-350",
@@ -177,8 +174,7 @@ const seeds: ProductSeed[] = [
     partNumber: "550052455",
     priceInPaise: 44900,
     mrpInPaise: 49900,
-    rating: 4.4,
-    ratingCount: 2105,
+    soldCount: 2105,
     stockQuantity: 120,
     fitment: fits(
       "hero-splendor-plus",
@@ -216,8 +212,7 @@ const seeds: ProductSeed[] = [
     partNumber: "105935",
     priceInPaise: 52900,
     mrpInPaise: 56000,
-    rating: 4.5,
-    ratingCount: 690,
+    soldCount: 690,
     stockQuantity: 72,
     fitment: fits(
       "honda-activa-6g",
@@ -247,8 +242,7 @@ const seeds: ProductSeed[] = [
     partNumber: "3411752",
     priceInPaise: 45900,
     mrpInPaise: 49500,
-    rating: 4.3,
-    ratingCount: 1530,
+    soldCount: 1530,
     stockQuantity: 150,
     fitment: fits("hero-splendor-plus", "hero-hf-deluxe", "bajaj-platina", "honda-shine-125"),
     isGenuine: false,
@@ -278,8 +272,7 @@ const seeds: ProductSeed[] = [
     partNumber: "90113030000",
     priceInPaise: 115000,
     mrpInPaise: 125000,
-    rating: 4.6,
-    ratingCount: 214,
+    soldCount: 214,
     stockQuantity: 18,
     fitment: fits("ktm-duke-200", "ktm-rc-200"),
     isGenuine: true,
@@ -307,8 +300,7 @@ const seeds: ProductSeed[] = [
     partNumber: "90213090000",
     priceInPaise: 89000,
     mrpInPaise: 95000,
-    rating: 4.5,
-    ratingCount: 156,
+    soldCount: 156,
     stockQuantity: 3,
     fitment: fits("ktm-duke-200", "ktm-duke-390", "ktm-rc-200"),
     isGenuine: true,
@@ -331,8 +323,7 @@ const seeds: ProductSeed[] = [
     partNumber: "JF181061",
     priceInPaise: 34900,
     mrpInPaise: 39500,
-    rating: 4.3,
-    ratingCount: 388,
+    soldCount: 388,
     stockQuantity: 40,
     fitment: fits("bajaj-pulsar-150", "bajaj-pulsar-ns200"),
     isGenuine: true,
@@ -359,8 +350,7 @@ const seeds: ProductSeed[] = [
     partNumber: "06430-K2E-T01",
     priceInPaise: 34900,
     mrpInPaise: 39900,
-    rating: 4.4,
-    ratingCount: 512,
+    soldCount: 512,
     stockQuantity: 36,
     fitment: fits("honda-activa-6g", vehicle("honda-shine-125", { variants: ["Drum"] })),
     isGenuine: true,
@@ -382,8 +372,7 @@ const seeds: ProductSeed[] = [
     partNumber: "591226",
     priceInPaise: 64900,
     mrpInPaise: 72000,
-    rating: 4.5,
-    ratingCount: 298,
+    soldCount: 298,
     stockQuantity: 25,
     fitment: fits(
       "royal-enfield-classic-350",
@@ -409,8 +398,7 @@ const seeds: ProductSeed[] = [
     partNumber: "F002H23411",
     priceInPaise: 44900,
     mrpInPaise: 52000,
-    rating: 4.2,
-    ratingCount: 97,
+    soldCount: 97,
     stockQuantity: 2,
     fitment: fits(vehicle("tvs-apache-rtr-160-4v", { variants: ["Disc"] })),
     isGenuine: false,
@@ -434,8 +422,7 @@ const seeds: ProductSeed[] = [
     partNumber: "RCK-KTM200-OR",
     priceInPaise: 289900,
     mrpInPaise: 325000,
-    rating: 4.4,
-    ratingCount: 176,
+    soldCount: 176,
     stockQuantity: 4,
     fitment: fits("ktm-duke-200", "ktm-rc-200"),
     isGenuine: false,
@@ -462,8 +449,7 @@ const seeds: ProductSeed[] = [
     partNumber: "RCK-RE350",
     priceInPaise: 234900,
     mrpInPaise: 260000,
-    rating: 4.3,
-    ratingCount: 241,
+    soldCount: 241,
     stockQuantity: 14,
     fitment: fits("royal-enfield-classic-350", "royal-enfield-bullet-350"),
     isGenuine: false,
@@ -485,8 +471,7 @@ const seeds: ProductSeed[] = [
     partNumber: "RCK-PUL150",
     priceInPaise: 159900,
     mrpInPaise: 179000,
-    rating: 4.2,
-    ratingCount: 330,
+    soldCount: 330,
     stockQuantity: 22,
     fitment: fits("bajaj-pulsar-150"),
     isGenuine: false,
@@ -508,8 +493,7 @@ const seeds: ProductSeed[] = [
     partNumber: "90310965000",
     priceInPaise: 345000,
     mrpInPaise: 345000,
-    rating: 4.6,
-    ratingCount: 64,
+    soldCount: 64,
     stockQuantity: 0,
     fitment: fits("ktm-duke-390"),
     isGenuine: true,
@@ -531,10 +515,9 @@ const seeds: ProductSeed[] = [
     partNumber: "102980",
     priceInPaise: 39900,
     mrpInPaise: 45000,
-    rating: 4.6,
-    ratingCount: 980,
+    soldCount: 980,
     stockQuantity: 85,
-    fitment: universal,
+    fitment: universal("bike"),
     isGenuine: false,
     warrantyMonths: null,
     createdAt: "2025-01-05T10:00:00+05:30",
@@ -556,8 +539,7 @@ const seeds: ProductSeed[] = [
     partNumber: "90106015000",
     priceInPaise: 64900,
     mrpInPaise: 69900,
-    rating: 4.6,
-    ratingCount: 188,
+    soldCount: 188,
     stockQuantity: 20,
     fitment: fits("ktm-duke-200", "ktm-duke-390", "ktm-rc-200"),
     isGenuine: true,
@@ -579,8 +561,7 @@ const seeds: ProductSeed[] = [
     partNumber: "90138015000",
     priceInPaise: 28900,
     mrpInPaise: 32000,
-    rating: 4.7,
-    ratingCount: 402,
+    soldCount: 402,
     stockQuantity: 55,
     fitment: fits("ktm-duke-200", "ktm-duke-390", "ktm-rc-200"),
     isGenuine: true,
@@ -601,8 +582,7 @@ const seeds: ProductSeed[] = [
     partNumber: "AF-H-ACT6G",
     priceInPaise: 27900,
     mrpInPaise: 34000,
-    rating: 4.2,
-    ratingCount: 275,
+    soldCount: 275,
     stockQuantity: 42,
     fitment: fits("honda-activa-6g"),
     isGenuine: false,
@@ -623,8 +603,7 @@ const seeds: ProductSeed[] = [
     partNumber: "F002H6RE35",
     priceInPaise: 54900,
     mrpInPaise: 61000,
-    rating: 4.3,
-    ratingCount: 122,
+    soldCount: 122,
     stockQuantity: 16,
     fitment: fits(
       "royal-enfield-classic-350",
@@ -651,8 +630,7 @@ const seeds: ProductSeed[] = [
     partNumber: "XLTZ5",
     priceInPaise: 134900,
     mrpInPaise: 159900,
-    rating: 4.4,
-    ratingCount: 1102,
+    soldCount: 1102,
     stockQuantity: 30,
     fitment: fits(
       "honda-activa-6g",
@@ -682,8 +660,7 @@ const seeds: ProductSeed[] = [
     partNumber: "AP-BTZ9",
     priceInPaise: 279900,
     mrpInPaise: 315000,
-    rating: 4.5,
-    ratingCount: 318,
+    soldCount: 318,
     stockQuantity: 12,
     fitment: fits(
       "ktm-duke-200",
@@ -711,8 +688,7 @@ const seeds: ProductSeed[] = [
     partNumber: "XLTZ7",
     priceInPaise: 189900,
     mrpInPaise: 219900,
-    rating: 4.3,
-    ratingCount: 446,
+    soldCount: 446,
     stockQuantity: 5,
     fitment: fits(
       "royal-enfield-classic-350",
@@ -744,8 +720,7 @@ const seeds: ProductSeed[] = [
     partNumber: "REVZFC-1107017",
     priceInPaise: 289000,
     mrpInPaise: 320000,
-    rating: 4.5,
-    ratingCount: 205,
+    soldCount: 205,
     stockQuantity: 9,
     fitment: fits("ktm-duke-200", "ktm-duke-390", "ktm-rc-200"),
     isGenuine: false,
@@ -769,8 +744,7 @@ const seeds: ProductSeed[] = [
     partNumber: "REVZC1-1506017",
     priceInPaise: 429000,
     mrpInPaise: 465000,
-    rating: 4.6,
-    ratingCount: 148,
+    soldCount: 148,
     stockQuantity: 2,
     fitment: fits("ktm-duke-200", "ktm-rc-200"),
     isGenuine: false,
@@ -793,8 +767,7 @@ const seeds: ProductSeed[] = [
     partNumber: "BEECON-9010010",
     priceInPaise: 165000,
     mrpInPaise: 189000,
-    rating: 4.3,
-    ratingCount: 522,
+    soldCount: 522,
     stockQuantity: 28,
     fitment: fits("honda-activa-6g", "tvs-jupiter", "suzuki-access-125"),
     isGenuine: false,
@@ -817,8 +790,7 @@ const seeds: ProductSeed[] = [
     partNumber: "PROTQ-1108017",
     priceInPaise: 215000,
     mrpInPaise: 240000,
-    rating: 4.4,
-    ratingCount: 264,
+    soldCount: 264,
     stockQuantity: 18,
     fitment: fits("tvs-apache-rtr-160-4v", "bajaj-pulsar-150"),
     isGenuine: false,
@@ -842,8 +814,7 @@ const seeds: ProductSeed[] = [
     partNumber: "11636UE2X1",
     priceInPaise: 114900,
     mrpInPaise: 139900,
-    rating: 4.3,
-    ratingCount: 612,
+    soldCount: 612,
     stockQuantity: 33,
     fitment: fits(
       "hero-splendor-plus",
@@ -874,8 +845,7 @@ const seeds: ProductSeed[] = [
     partNumber: "12342PRC1",
     priceInPaise: 39900,
     mrpInPaise: 45000,
-    rating: 4.4,
-    ratingCount: 840,
+    soldCount: 840,
     stockQuantity: 60,
     fitment: fits("royal-enfield-classic-350", "royal-enfield-bullet-350"),
     isGenuine: false,
@@ -897,10 +867,9 @@ const seeds: ProductSeed[] = [
     partNumber: "0986AH0503",
     priceInPaise: 99900,
     mrpInPaise: 119000,
-    rating: 4.5,
-    ratingCount: 1430,
+    soldCount: 1430,
     stockQuantity: 40,
-    fitment: universal,
+    fitment: universal("bike", "scooter"),
     isGenuine: false,
     warrantyMonths: 12,
     createdAt: "2025-02-25T10:00:00+05:30",
@@ -921,10 +890,9 @@ const seeds: ProductSeed[] = [
     partNumber: "TI-LED-SQ2",
     priceInPaise: 44900,
     mrpInPaise: 52000,
-    rating: 4.1,
-    ratingCount: 233,
+    soldCount: 233,
     stockQuantity: 26,
-    fitment: universal,
+    fitment: universal("bike", "scooter"),
     isGenuine: false,
     warrantyMonths: 6,
     createdAt: "2025-10-04T10:00:00+05:30",
@@ -947,8 +915,7 @@ const seeds: ProductSeed[] = [
     partNumber: "90202069000",
     priceInPaise: 38900,
     mrpInPaise: 42000,
-    rating: 4.6,
-    ratingCount: 88,
+    soldCount: 88,
     stockQuantity: 11,
     fitment: fits("ktm-duke-200"),
     isGenuine: true,
@@ -969,8 +936,7 @@ const seeds: ProductSeed[] = [
     partNumber: "CP-BJ-PUL150",
     priceInPaise: 105000,
     mrpInPaise: 118000,
-    rating: 4.2,
-    ratingCount: 141,
+    soldCount: 141,
     stockQuantity: 15,
     fitment: fits("bajaj-pulsar-150"),
     isGenuine: false,
@@ -991,8 +957,7 @@ const seeds: ProductSeed[] = [
     partNumber: "17910-K2E-T00",
     priceInPaise: 17900,
     mrpInPaise: 19900,
-    rating: 4.5,
-    ratingCount: 203,
+    soldCount: 203,
     stockQuantity: 40,
     fitment: fits("honda-activa-6g"),
     isGenuine: true,
@@ -1015,10 +980,9 @@ const seeds: ProductSeed[] = [
     partNumber: "MH-USB-QC3",
     priceInPaise: 84900,
     mrpInPaise: 109900,
-    rating: 4.2,
-    ratingCount: 1876,
+    soldCount: 1876,
     stockQuantity: 50,
-    fitment: universal,
+    fitment: universal("bike", "scooter"),
     isGenuine: false,
     warrantyMonths: 6,
     createdAt: "2025-08-28T10:00:00+05:30",
@@ -1039,8 +1003,7 @@ const seeds: ProductSeed[] = [
     partNumber: "93612911044",
     priceInPaise: 245000,
     mrpInPaise: 270000,
-    rating: 4.4,
-    ratingCount: 39,
+    soldCount: 39,
     stockQuantity: 7,
     fitment: fits(
       vehicle("ktm-duke-200", { years: [2025, 2024] }),
@@ -1067,10 +1030,9 @@ const seeds: ProductSeed[] = [
     partNumber: "SBA-7-MB-M",
     priceInPaise: 159900,
     mrpInPaise: 189900,
-    rating: 4.3,
-    ratingCount: 2310,
+    soldCount: 2310,
     stockQuantity: 45,
-    fitment: universal,
+    fitment: universal("bike", "scooter"),
     isGenuine: false,
     warrantyMonths: null,
     createdAt: "2025-04-30T10:00:00+05:30",
@@ -1091,10 +1053,9 @@ const seeds: ProductSeed[] = [
     partNumber: "SBA-2-GR-L",
     priceInPaise: 249900,
     mrpInPaise: 299900,
-    rating: 4.4,
-    ratingCount: 980,
+    soldCount: 980,
     stockQuantity: 6,
-    fitment: universal,
+    fitment: universal("bike", "scooter"),
     isGenuine: false,
     warrantyMonths: null,
     createdAt: "2025-10-02T10:00:00+05:30",
@@ -1105,6 +1066,233 @@ const seeds: ProductSeed[] = [
       { label: "Certification", value: "ISI and DOT" },
       { label: "Size", value: "Large (600 mm)" },
       { label: "Weight", value: "1,400 g" },
+    ],
+  },
+
+  // Cars and commercial vehicles
+  {
+    slug: "castrol-magnatec-5w30-3-5l",
+    name: "Castrol Magnatec 5W-30 Car Engine Oil (3.5 L)",
+    brandSlug: "castrol",
+    categorySlug: "engine-oil",
+    partNumber: "3426786",
+    priceInPaise: 239900,
+    mrpInPaise: 275000,
+    soldCount: 512,
+    stockQuantity: 28,
+    fitment: fits(
+      "maruti-swift",
+      "maruti-baleno",
+      "maruti-wagon-r",
+      "hyundai-i20",
+      "honda-city",
+      "tata-punch",
+    ),
+    isGenuine: false,
+    warrantyMonths: null,
+    createdAt: "2025-06-10T10:00:00+05:30",
+    description:
+      "Synthetic oil for petrol cars. Its molecules cling to engine parts, so the engine is protected from the first second, even on short city trips.",
+    highlights: [
+      "Protects from start-up in stop-and-go traffic",
+      "Suits most petrol hatchbacks and sedans",
+      "Change every 10,000 km or once a year",
+    ],
+    specs: [
+      { label: "Grade", value: "5W-30" },
+      { label: "Type", value: "Synthetic" },
+      { label: "Volume", value: "3.5 L" },
+      { label: "Specification", value: "API SP, ACEA A5/B5" },
+    ],
+  },
+  {
+    slug: "shell-rimula-r4x-15w40-5l",
+    name: "Shell Rimula R4 X 15W-40 Diesel Engine Oil (5 L)",
+    brandSlug: "shell",
+    categorySlug: "engine-oil",
+    partNumber: "550048373",
+    priceInPaise: 219900,
+    mrpInPaise: 249900,
+    soldCount: 287,
+    stockQuantity: 17,
+    fitment: fits(
+      vehicle("tata-ace-gold", { variants: ["Diesel"] }),
+      "tata-intra-v30",
+      "mahindra-bolero-pik-up",
+      "ashok-leyland-dost-plus",
+      "mahindra-scorpio-n",
+      "toyota-innova-crysta",
+    ),
+    isGenuine: false,
+    warrantyMonths: null,
+    createdAt: "2025-04-22T10:00:00+05:30",
+    description:
+      "Heavy-duty diesel oil that keeps soot under control and protects the engine on long, loaded runs.",
+    highlights: [
+      "Made for diesel pickups and small trucks",
+      "Controls soot and engine wear",
+      "Change every 10,000–15,000 km",
+    ],
+    specs: [
+      { label: "Grade", value: "15W-40" },
+      { label: "Type", value: "Mineral, heavy duty" },
+      { label: "Volume", value: "5 L" },
+      { label: "Specification", value: "API CI-4" },
+    ],
+  },
+  {
+    slug: "bosch-front-brake-pads-swift-baleno",
+    name: "Bosch Front Brake Pads for Maruti Swift and Baleno",
+    brandSlug: "bosch",
+    categorySlug: "brakes",
+    partNumber: "F002H23891",
+    priceInPaise: 114900,
+    mrpInPaise: 132000,
+    soldCount: 364,
+    stockQuantity: 21,
+    fitment: fits("maruti-swift", "maruti-baleno"),
+    isGenuine: false,
+    warrantyMonths: null,
+    createdAt: "2025-07-05T10:00:00+05:30",
+    description: "A set of four front pads with steady bite and low dust, made to OE size.",
+    highlights: ["Set of 4 pads for both front wheels", "Low dust and low noise", "OE fit"],
+    specs: [
+      { label: "Position", value: "Front" },
+      { label: "Pieces", value: "4" },
+      { label: "Material", value: "Low-metallic" },
+    ],
+  },
+  {
+    slug: "bosch-air-filter-hyundai-creta",
+    name: "Bosch Air Filter for Hyundai Creta",
+    brandSlug: "bosch",
+    categorySlug: "filters",
+    partNumber: "F002H60411",
+    priceInPaise: 52900,
+    mrpInPaise: 59900,
+    soldCount: 198,
+    stockQuantity: 3,
+    fitment: fits("hyundai-creta"),
+    isGenuine: false,
+    warrantyMonths: null,
+    createdAt: "2025-08-14T10:00:00+05:30",
+    description: "Pleated paper filter that keeps dust out of the engine on dusty Bengaluru roads.",
+    highlights: ["Exact fit for the Creta air box", "Change every 10,000 km"],
+    specs: [
+      { label: "Type", value: "Panel, pleated paper" },
+      { label: "Service interval", value: "10,000 km" },
+    ],
+  },
+  {
+    slug: "exide-mileage-din44lh-car-battery",
+    name: "Exide Mileage DIN44LH 12V 44Ah Car Battery",
+    brandSlug: "exide",
+    categorySlug: "batteries",
+    partNumber: "MLDIN44LH",
+    priceInPaise: 485000,
+    mrpInPaise: 549900,
+    soldCount: 241,
+    stockQuantity: 9,
+    fitment: fits("maruti-swift", "maruti-baleno", "hyundai-i20", "tata-nexon", "tata-punch"),
+    isGenuine: false,
+    warrantyMonths: 55,
+    createdAt: "2025-05-30T10:00:00+05:30",
+    description:
+      "Maintenance-free car battery with strong starting power, including on cold mornings.",
+    highlights: ["Maintenance-free", "55-month warranty", "Exchange price on your old battery"],
+    specs: [
+      { label: "Voltage", value: "12 V" },
+      { label: "Capacity", value: "44 Ah" },
+      { label: "Terminal", value: "Left hand" },
+    ],
+  },
+  {
+    slug: "mrf-zlx-185-65-r15",
+    name: "MRF ZLX 185/65 R15 Tubeless Car Tyre",
+    brandSlug: "mrf",
+    categorySlug: "tyres",
+    partNumber: "ZLX-1856515",
+    priceInPaise: 549900,
+    mrpInPaise: 612000,
+    soldCount: 176,
+    stockQuantity: 14,
+    fitment: fits(
+      vehicle("maruti-baleno", { variants: ["Zeta"] }),
+      vehicle("hyundai-i20", { variants: ["Sportz"] }),
+    ),
+    isGenuine: false,
+    warrantyMonths: 60,
+    createdAt: "2025-09-01T10:00:00+05:30",
+    description: "A quiet, long-lasting tyre for hatchbacks, with good grip in the wet.",
+    highlights: ["Quiet ride", "Good wet grip", "Tubeless"],
+    specs: [
+      { label: "Size", value: "185/65 R15" },
+      { label: "Type", value: "Tubeless radial" },
+      { label: "Load and speed", value: "88H" },
+    ],
+  },
+  {
+    slug: "bosch-clear-advantage-wiper-24in",
+    name: "Bosch Clear Advantage Wiper Blade (24 inch)",
+    brandSlug: "bosch",
+    categorySlug: "accessories",
+    partNumber: "3397016588",
+    priceInPaise: 44900,
+    mrpInPaise: 52000,
+    soldCount: 623,
+    stockQuantity: 40,
+    fitment: universal("car"),
+    isGenuine: false,
+    warrantyMonths: null,
+    createdAt: "2025-06-18T10:00:00+05:30",
+    description:
+      "Frameless blade that wipes evenly at highway speed. The adapter fits most car arms.",
+    highlights: ["Frameless, even pressure", "Universal adapter", "Quiet in heavy rain"],
+    specs: [
+      { label: "Length", value: "24 inch (600 mm)" },
+      { label: "Type", value: "Frameless" },
+    ],
+  },
+  {
+    slug: "uno-minda-clutch-plate-tata-ace-gold",
+    name: "Uno Minda Clutch Plate for Tata Ace Gold",
+    brandSlug: "uno-minda",
+    categorySlug: "clutch-cables",
+    partNumber: "CP-ACE-160",
+    priceInPaise: 184900,
+    mrpInPaise: 215000,
+    soldCount: 132,
+    stockQuantity: 7,
+    fitment: fits("tata-ace-gold"),
+    isGenuine: false,
+    warrantyMonths: 6,
+    createdAt: "2025-07-21T10:00:00+05:30",
+    description: "Hard-wearing clutch plate for the Ace Gold, made for daily loaded city runs.",
+    highlights: ["Made for loaded city driving", "6-month warranty"],
+    specs: [
+      { label: "Diameter", value: "160 mm" },
+      { label: "Splines", value: "18" },
+    ],
+  },
+  {
+    slug: "bosch-rear-brake-shoes-piaggio-ape-city",
+    name: "Bosch Rear Brake Shoes for Piaggio Ape City",
+    brandSlug: "bosch",
+    categorySlug: "brakes",
+    partNumber: "F002H20871",
+    priceInPaise: 48900,
+    mrpInPaise: 56000,
+    soldCount: 154,
+    stockQuantity: 18,
+    fitment: fits("piaggio-ape-city", "bajaj-re-compact"),
+    isGenuine: false,
+    warrantyMonths: null,
+    createdAt: "2025-08-02T10:00:00+05:30",
+    description: "A pair of rear shoes for three-wheelers, with steady braking under load.",
+    highlights: ["Pair for the rear wheels", "Steady braking under load"],
+    specs: [
+      { label: "Position", value: "Rear" },
+      { label: "Pieces", value: "2" },
     ],
   },
 ];
@@ -1149,133 +1337,51 @@ const productPhotos: Record<string, string> = {
   "ktm-frame-sliders-duke-2024": "controls-2",
   "steelbird-sba-7-7wings-full-face-helmet": "helmet-1",
   "steelbird-air-sba-2-full-face-helmet": "helmet-2",
+  "castrol-magnatec-5w30-3-5l": "engine-oil-1",
+  "shell-rimula-r4x-15w40-5l": "engine-oil-2",
+  "bosch-front-brake-pads-swift-baleno": "brakes-2",
+  "bosch-air-filter-hyundai-creta": "filter-1",
+  "exide-mileage-din44lh-car-battery": "battery-1",
+  "mrf-zlx-185-65-r15": "tyre-1",
+  "uno-minda-clutch-plate-tata-ace-gold": "controls-2",
+  "bosch-rear-brake-shoes-piaggio-ape-city": "brakes-3",
 };
 
-const products: Product[] = seeds.map(
-  ({ brandSlug, categorySlug, rating, ratingCount, ...seed }, index) => {
-    const brand = brands.find((b) => b.slug === brandSlug);
-    const category = categories.find((c) => c.slug === categorySlug);
-    if (!brand || !category)
-      throw new Error(`Unknown brand or category in mock product: ${seed.slug}`);
+const products: MockProduct[] = seeds.map(({ brandSlug, categorySlug, ...seed }, index) => {
+  const brand = brands.find((b) => b.slug === brandSlug);
+  const category = categories.find((c) => c.slug === categorySlug);
+  if (!brand || !category)
+    throw new Error(`Unknown brand or category in mock product: ${seed.slug}`);
 
-    return {
-      ...seed,
-      id: `prd-${String(index + 1).padStart(3, "0")}`,
-      sku: `KG-${String(10001 + index)}`,
-      brand,
-      category,
-      rating: { average: rating, count: ratingCount },
-      image: null,
-      images: [{ url: `/images/products/${productPhotos[seed.slug]}.jpg`, alt: seed.name }],
-      isInstallable: categorySlug !== "riding-gear",
-    };
-  },
-);
-
-const reviews: Review[] = [
-  {
-    id: "rev-001",
-    productId: "prd-001",
-    authorName: "Karthik S.",
-    rating: 5,
-    title: "Engine feels smoother",
-    body: "Using this on my Duke 200 for two oil changes now. Gear shifts are slicker and the engine runs cooler in traffic.",
-    isVerifiedPurchase: true,
-    createdAt: "2026-08-14T19:20:00+05:30",
-  },
-  {
-    id: "rev-002",
-    productId: "prd-001",
-    authorName: "Pooja N.",
-    rating: 4,
-    title: "Genuine product, quick delivery",
-    body: "Seal was intact and the batch date was recent. Delivered to Indiranagar in two days.",
-    isVerifiedPurchase: true,
-    createdAt: "2026-07-02T11:05:00+05:30",
-  },
-  {
-    id: "rev-003",
-    productId: "prd-001",
-    authorName: "Mohammed I.",
-    rating: 5,
-    title: "Best oil for the RC 200",
-    body: "Have tried a few brands. This one keeps the clutch light even after 5,000 km.",
-    isVerifiedPurchase: false,
-    createdAt: "2026-05-21T08:45:00+05:30",
-  },
-  {
-    id: "rev-004",
-    productId: "prd-006",
-    authorName: "Vikram R.",
-    rating: 5,
-    title: "Fit perfectly",
-    body: "Exact fit for my 2023 Duke 200. Bite is strong even in the rain. Got it fitted at Kannali Garage Whitefield.",
-    isVerifiedPurchase: true,
-    createdAt: "2026-09-03T17:30:00+05:30",
-  },
-  {
-    id: "rev-005",
-    productId: "prd-006",
-    authorName: "Sneha M.",
-    rating: 4,
-    title: "Original part, worth it",
-    body: "Slightly pricier than aftermarket, but the feel is exactly like stock.",
-    isVerifiedPurchase: true,
-    createdAt: "2026-06-18T13:10:00+05:30",
-  },
-  {
-    id: "rev-006",
-    productId: "prd-024",
-    authorName: "Arun K.",
-    rating: 5,
-    title: "Great grip",
-    body: "Huge improvement over the worn stock tyre. Confident on wet roads around Hebbal.",
-    isVerifiedPurchase: true,
-    createdAt: "2026-07-29T09:00:00+05:30",
-  },
-  {
-    id: "rev-007",
-    productId: "prd-024",
-    authorName: "Deepa V.",
-    rating: 4,
-    title: "Good value",
-    body: "Good tyre for the price. Took a few hundred kilometres to scrub in.",
-    isVerifiedPurchase: true,
-    createdAt: "2026-04-11T16:40:00+05:30",
-  },
-  {
-    id: "rev-008",
-    productId: "prd-037",
-    authorName: "Rahul P.",
-    rating: 4,
-    title: "Comfortable for daily use",
-    body: "Light and comfortable for my office commute. The visor could be a little clearer at night.",
-    isVerifiedPurchase: true,
-    createdAt: "2026-09-12T20:15:00+05:30",
-  },
-  {
-    id: "rev-009",
-    productId: "prd-037",
-    authorName: "Ananya G.",
-    rating: 5,
-    title: "Good fit and finish",
-    body: "Medium size fits well. Lining is soft and easy to remove for washing.",
-    isVerifiedPurchase: false,
-    createdAt: "2026-03-08T10:30:00+05:30",
-  },
-];
+  const photo = productPhotos[seed.slug];
+  const images = photo ? [{ url: `/images/products/${photo}.jpg`, alt: seed.name }] : [];
+  return {
+    ...seed,
+    id: `prd-${String(index + 1).padStart(3, "0")}`,
+    sku: `KG-${String(10001 + index)}`,
+    brand,
+    category,
+    // The product page passes the full product to "Add to cart", so it needs the main photo too.
+    image: images[0] ?? null,
+    images,
+  };
+});
 
 function toSummary({
   images,
   description,
   highlights,
   specs,
+  soldCount,
   ...summary
-}: Product): ProductSummary {
+}: MockProduct): ProductSummary {
   return { ...summary, image: images[0] ?? null };
 }
 
-// Searches the part itself and the bikes it fits, so "KTM" or "Activa" finds compatible parts too.
+// Searches the part itself and the vehicles it fits, so "KTM" or "Activa" finds compatible parts
+// too. Part numbers and SKUs also match without their spaces and dashes ("kg10038", "F002 H23891").
+const compact = (value: string) => value.replace(/[\s-]/g, "");
+
 function matchesSearch(product: Product, q: string): boolean {
   const fitsNames =
     product.fitment.kind === "specific"
@@ -1287,6 +1393,8 @@ function matchesSearch(product: Product, q: string): boolean {
     product.category.name,
     product.partNumber,
     product.sku,
+    compact(product.partNumber),
+    compact(product.sku),
     ...fitsNames,
   ]
     .join(" ")
@@ -1304,8 +1412,9 @@ function discountOf(product: Product): number {
 
 function matchesQuery(p: Product, query: ProductQuery): boolean {
   const { q, category, brand, fits: bike, minPriceInPaise, maxPriceInPaise, inStock } = query;
-  const { minRating, minDiscountPercent, hasWarranty } = query;
+  const { ids, minDiscountPercent, hasWarranty } = query;
   return (
+    (!ids || ids.includes(p.id)) &&
     (!q || matchesSearch(p, q)) &&
     (!category || p.category.slug === category) &&
     (!brand?.length || brand.includes(p.brand.slug)) &&
@@ -1313,7 +1422,6 @@ function matchesQuery(p: Product, query: ProductQuery): boolean {
     (minPriceInPaise === undefined || p.priceInPaise >= minPriceInPaise) &&
     (maxPriceInPaise === undefined || p.priceInPaise <= maxPriceInPaise) &&
     (!inStock || p.stockQuantity > 0) &&
-    (minRating === undefined || p.rating.average >= minRating) &&
     (minDiscountPercent === undefined || discountOf(p) >= minDiscountPercent) &&
     (!hasWarranty || p.warrantyMonths !== null)
   );
@@ -1321,37 +1429,15 @@ function matchesQuery(p: Product, query: ProductQuery): boolean {
 
 const sorters: Record<
   NonNullable<ProductQuery["sort"]>,
-  ((a: Product, b: Product) => number) | null
+  ((a: MockProduct, b: MockProduct) => number) | null
 > = {
   relevance: null,
   "price-asc": (a, b) => a.priceInPaise - b.priceInPaise,
   "price-desc": (a, b) => b.priceInPaise - a.priceInPaise,
   newest: (a, b) => b.createdAt.localeCompare(a.createdAt),
-  rating: (a, b) => b.rating.average - a.rating.average || b.rating.count - a.rating.count,
   discount: (a, b) => discountOf(b) - discountOf(a),
-  popular: (a, b) => b.rating.count - a.rating.count,
+  popular: (a, b) => b.soldCount - a.soldCount,
 };
-
-/** A believable star spread that matches the product's average and count. */
-function ratingBreakdown(product: Product): RatingBreakdown {
-  const { average, count } = product.rating;
-  const shift = average - 4.3;
-  const weights = [
-    0.03 - shift * 0.05,
-    0.04 - shift * 0.1,
-    0.1 - shift * 0.2,
-    0.28,
-    0.55 + shift * 0.35,
-  ].map((w) => Math.max(w, 0.01));
-  const totalWeight = weights.reduce((sum, w) => sum + w, 0);
-  const counts = weights.map((w) => Math.round((w / totalWeight) * count));
-  counts[4] += count - counts.reduce((sum, c) => sum + c, 0);
-  return {
-    average,
-    count,
-    distribution: counts as RatingBreakdown["distribution"],
-  };
-}
 
 /** For other demo handlers (orders) that price items by id, as the backend would. */
 export function findProductById(id: string): Product | undefined {
@@ -1374,9 +1460,9 @@ export const mockCatalog = {
     // With a bike, "relevance" puts parts made for that bike ahead of universal ones.
     const sorter =
       sort === "relevance" && bike
-        ? (a: Product, b: Product) =>
+        ? (a: MockProduct, b: MockProduct) =>
             Number(a.fitment.kind === "universal") - Number(b.fitment.kind === "universal") ||
-            b.rating.count - a.rating.count
+            b.soldCount - a.soldCount
         : sorters[sort];
     const sorted = sorter ? [...matching].sort(sorter) : matching;
     return paginate(sorted.map(toSummary), page, pageSize);
@@ -1420,16 +1506,16 @@ export const mockCatalog = {
 
     const modelIds = (p: Product) =>
       p.fitment.kind === "specific" ? p.fitment.vehicles.map((v) => v.modelId) : [];
-    const sharesBike = (p: Product) => modelIds(p).some((id) => modelIds(product).includes(id));
+    const sharesVehicle = (p: Product) => modelIds(p).some((id) => modelIds(product).includes(id));
     const others = products
       .filter((p) => p.id !== product.id)
-      .sort((a, b) => b.rating.count - a.rating.count);
+      .sort((a, b) => b.soldCount - a.soldCount);
 
     return {
       boughtTogether: others
         .filter((p) => p.category.id !== product.category.id)
         .filter((p) =>
-          product.fitment.kind === "universal" ? p.fitment.kind === "universal" : sharesBike(p),
+          product.fitment.kind === "universal" ? p.fitment.kind === "universal" : sharesVehicle(p),
         )
         .slice(0, 8)
         .map(toSummary),
@@ -1437,25 +1523,6 @@ export const mockCatalog = {
         .filter((p) => p.category.id === product.category.id)
         .slice(0, 10)
         .map(toSummary),
-    };
-  },
-
-  async getProductReviews(
-    productId: string,
-    page = 1,
-  ): Promise<{
-    breakdown: RatingBreakdown;
-    reviews: Paginated<Review>;
-  } | null> {
-    const product = products.find((p) => p.id === productId);
-    if (!product) return null;
-
-    const productReviews = reviews
-      .filter((r) => r.productId === productId)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    return {
-      breakdown: ratingBreakdown(product),
-      reviews: paginate(productReviews, page, 5),
     };
   },
 };

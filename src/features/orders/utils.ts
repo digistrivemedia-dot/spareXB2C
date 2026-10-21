@@ -10,6 +10,7 @@ import type {
 import { formatDateTime } from "@/lib/format";
 
 export const orderStatusLabel: Record<OrderStatus, string> = {
+  "payment-pending": "Payment pending",
   placed: "Placed",
   confirmed: "Confirmed",
   processing: "Processing",
@@ -18,11 +19,10 @@ export const orderStatusLabel: Record<OrderStatus, string> = {
   "out-for-delivery": "Out for delivery",
   delivered: "Delivered",
   cancelled: "Cancelled",
-  "return-requested": "Return requested",
-  returned: "Returned",
 };
 
 export const orderStatusTone: Record<OrderStatus, StatusTone> = {
+  "payment-pending": "warning",
   placed: "info",
   confirmed: "info",
   processing: "info",
@@ -31,8 +31,6 @@ export const orderStatusTone: Record<OrderStatus, StatusTone> = {
   "out-for-delivery": "info",
   delivered: "success",
   cancelled: "danger",
-  "return-requested": "warning",
-  returned: "neutral",
 };
 
 export const paymentMethodLabel: Record<PaymentMethod, string> = {
@@ -42,6 +40,11 @@ export const paymentMethodLabel: Record<PaymentMethod, string> = {
   wallet: "Wallet",
   cod: "Cash on delivery",
 };
+
+/** "UPI", "Cash on delivery", or "Online payment" before the customer has paid. */
+export function getPaymentLabel(payment: Order["payment"]): string {
+  return payment.method ? paymentMethodLabel[payment.method] : "Online payment";
+}
 
 export const orderTabs: { group: OrderGroup; label: string }[] = [
   { group: "all", label: "All" },
@@ -81,33 +84,46 @@ export function getOrderProgress(order: Order): { steps: Step[]; activeStep: num
   return { steps, activeStep: order.status === "delivered" ? steps.length : reached + 1 };
 }
 
-// Once packed, the parcel is with the courier team, so it can no longer be stopped from the app.
-const cancellableStatuses: OrderStatus[] = ["placed", "confirmed", "processing"];
+// Until the courier has it. Unpaid orders can be cancelled too, so they don't linger.
+const cancellableStatuses: OrderStatus[] = [
+  "payment-pending",
+  "placed",
+  "confirmed",
+  "processing",
+  "packed",
+];
 
 export function canCancel(order: Order): boolean {
   return cancellableStatuses.includes(order.status);
 }
 
-/** `today` is the date in India, "YYYY-MM-DD". */
+/** Units of each item not already in an open or completed return. Rejected returns don't count. */
+export function getReturnableQuantities(order: Order): Record<string, number> {
+  const taken = (itemId: string) =>
+    order.returns
+      .filter((r) => r.status !== "rejected")
+      .flatMap((r) => r.items)
+      .filter((line) => line.orderItemId === itemId)
+      .reduce((sum, line) => sum + line.quantity, 0);
+  return Object.fromEntries(order.items.map((item) => [item.id, item.quantity - taken(item.id)]));
+}
+
+/** Delivered, inside the return window, with something left to return. `today` is "YYYY-MM-DD" in India. */
 export function canReturn(order: Order, today: string): boolean {
+  const hasItemsLeft = Object.values(getReturnableQuantities(order)).some((qty) => qty > 0);
   return (
-    order.status === "delivered" && order.returnableUntil !== null && today <= order.returnableUntil
+    order.status === "delivered" &&
+    order.returnableUntil !== null &&
+    today <= order.returnableUntil &&
+    hasItemsLeft
   );
 }
 
 export const cancelReasons = [
   "Ordered by mistake",
-  "The part doesn't fit my bike",
+  "The part doesn't fit my vehicle",
   "Found a better price elsewhere",
   "Delivery is taking too long",
-  "Other",
-];
-
-export const returnReasons = [
-  "The part doesn't fit my bike",
-  "Received a damaged part",
-  "Received the wrong part",
-  "Part is missing from the box",
   "Other",
 ];
 

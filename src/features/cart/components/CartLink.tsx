@@ -23,7 +23,7 @@ export function CartLink() {
             </span>
           )}
         </span>
-        <span className="hidden lg:inline">Cart</span>
+        <span className="hidden xl:inline">Cart</span>
       </Link>
     </HeaderAction>
   );

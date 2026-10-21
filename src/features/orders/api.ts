@@ -23,9 +23,3 @@ export function cancelOrder(id: string, reason: string): Promise<Order | null> {
     ? mockOrders.cancelOrder(id, reason)
     : orNull(apiClient.post(`/me/orders/${id}/cancel`, { reason }));
 }
-
-export function requestReturn(id: string, reason: string): Promise<Order | null> {
-  return useMock
-    ? mockOrders.requestReturn(id, reason)
-    : orNull(apiClient.post(`/me/orders/${id}/return`, { reason }));
-}

@@ -1,6 +1,9 @@
 import type { Address } from "@/features/account/types";
+import type { ReturnStatus } from "@/features/returns/types";
 
 export type OrderStatus =
+  /** Created at checkout, waiting for the online payment to go through. */
+  | "payment-pending"
   | "placed"
   | "confirmed"
   | "processing"
@@ -8,13 +11,14 @@ export type OrderStatus =
   | "shipped"
   | "out-for-delivery"
   | "delivered"
-  | "cancelled"
-  | "return-requested"
-  | "returned";
+  | "cancelled";
 
 export type PaymentMethod = "upi" | "card" | "netbanking" | "wallet" | "cod";
 
-export type PaymentStatus = "pending" | "paid" | "refunded";
+export type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
+
+/** How the customer chose to pay at checkout: online (Razorpay) or cash on delivery. */
+export type PaymentMode = "online" | "cod";
 
 export type OrderItem = {
   id: string;
@@ -34,7 +38,6 @@ export type OrderPricing = {
   couponCode: string | null;
   couponDiscountInPaise: number;
   deliveryFeeInPaise: number;
-  installationFeeInPaise: number;
   totalInPaise: number;
 };
 
@@ -57,19 +60,33 @@ export type Order = {
   items: OrderItem[];
   deliveryAddress: OrderAddress;
   billingAddress: OrderAddress;
-  /** The customer's bike the parts are for, when they chose one at checkout. */
-  bike: { id: string; name: string } | null;
+  /** The customer's vehicle the parts are for, when they chose one at checkout. */
+  vehicle: { id: string; name: string } | null;
   payment: {
-    method: PaymentMethod;
+    /** "cod", or how the customer paid online; null until an online payment goes through. */
+    method: PaymentMethod | null;
     status: PaymentStatus;
+    /** Why the last online attempt failed, shown on the retry page. */
+    failureReason: string | null;
   };
   pricing: OrderPricing;
   gstin: string | null;
-  /** Why it was cancelled or returned. */
+  /** Why it was cancelled. */
   cancellationReason: string | null;
   tracking: { courier: string; trackingNumber: string } | null;
   /** Last day a return can be requested (ISO date); set once delivered, per the return policy. */
   returnableUntil: string | null;
+  /** Returns asked for on this order, newest first. */
+  returns: OrderReturnSummary[];
+};
+
+/** A return as listed on its order; the full details are on the return itself. */
+export type OrderReturnSummary = {
+  id: string;
+  number: string;
+  status: ReturnStatus;
+  items: { orderItemId: string; quantity: number }[];
+  createdAt: string;
 };
 
 /** The tabs on the orders page. */
@@ -83,11 +100,11 @@ export type OrderQuery = {
 
 /** What checkout sends. The server prices the items itself; the cart's prices are only a preview. */
 export type PlaceOrderInput = {
-  lines: { productId: string; quantity: number; withInstallation: boolean }[];
+  lines: { productId: string; quantity: number }[];
   couponCode: string | null;
   deliveryAddress: OrderAddress;
   billingAddress: OrderAddress;
   gstin: string | null;
-  bikeId: string | null;
-  paymentMethod: PaymentMethod;
+  vehicleId: string | null;
+  paymentMode: PaymentMode;
 };

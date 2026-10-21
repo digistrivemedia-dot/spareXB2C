@@ -23,12 +23,13 @@ import { visitReviewSchema, type VisitReviewValues } from "@/features/service/sc
 import { formatDate } from "@/lib/format";
 
 type RateVisitDialogProps = {
-  recordId: string;
+  jobId: string;
   garageName: string;
   visitDate: string;
 };
 
-export function RateVisitDialog({ recordId, garageName, visitDate }: RateVisitDialogProps) {
+/** "Rate your visit": stars and an optional comment about the garage, after a finished service. */
+export function RateVisitDialog({ jobId, garageName, visitDate }: RateVisitDialogProps) {
   const [open, setOpen] = useState(false);
   const form = useForm<VisitReviewValues>({
     resolver: zodResolver(visitReviewSchema),
@@ -36,7 +37,7 @@ export function RateVisitDialog({ recordId, garageName, visitDate }: RateVisitDi
   });
 
   async function onSubmit(values: VisitReviewValues) {
-    const result = await rateServiceVisitAction(recordId, values);
+    const result = await rateServiceVisitAction(jobId, values);
     if (!result.ok) {
       toast.error(result.message);
       return;
@@ -44,7 +45,7 @@ export function RateVisitDialog({ recordId, garageName, visitDate }: RateVisitDi
     setOpen(false);
     form.reset();
     toast.success("Thanks for rating your visit", {
-      description: "It helps the garage and other riders.",
+      description: "It helps the garage, and other customers choose one.",
     });
   }
 

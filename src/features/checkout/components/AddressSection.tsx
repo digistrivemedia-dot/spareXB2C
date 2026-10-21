@@ -4,9 +4,9 @@ import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { FieldError } from "@/components/ui/field";
 import { RadioCard } from "@/components/ui/RadioCard";
 import { RadioGroup } from "@/components/ui/radio-group";
+import { AddressFields } from "@/features/account/components/AddressFields";
 import type { Address } from "@/features/account/types";
 import { BillingFields } from "@/features/checkout/components/BillingFields";
-import { NewAddressFields } from "@/features/checkout/components/NewAddressFields";
 import type { CheckoutValues } from "@/features/checkout/schema";
 import { formatMobile } from "@/lib/format";
 
@@ -54,7 +54,11 @@ export function AddressSection({ addresses }: { addresses: Address[] }) {
         )}
       />
       <FieldError errors={[errors.addressId]} />
-      {addressId === "new" && <NewAddressFields />}
+      {addressId === "new" && (
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+          <AddressFields />
+        </div>
+      )}
 
       <BillingFields addresses={addresses} />
     </div>

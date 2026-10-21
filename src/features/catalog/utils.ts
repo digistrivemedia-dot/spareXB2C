@@ -3,15 +3,17 @@ import type { VehicleRef } from "@/features/vehicles/types";
 
 export function getFitStatus(
   fitment: Fitment,
-  bike: Pick<VehicleRef, "modelId" | "variantId" | "year">,
+  vehicle: Pick<VehicleRef, "type" | "modelId" | "variantId" | "year">,
 ): FitStatus {
-  if (fitment.kind === "universal") return "universal";
+  if (fitment.kind === "universal") {
+    return fitment.vehicleTypes.includes(vehicle.type) ? "universal" : "no-fit";
+  }
 
   const fits = fitment.vehicles.some(
-    (vehicle) =>
-      vehicle.modelId === bike.modelId &&
-      vehicle.years.includes(bike.year) &&
-      (vehicle.variantIds === null || vehicle.variantIds.includes(bike.variantId)),
+    (fit) =>
+      fit.modelId === vehicle.modelId &&
+      fit.years.includes(vehicle.year) &&
+      (fit.variantIds === null || fit.variantIds.includes(vehicle.variantId)),
   );
   return fits ? "fits" : "no-fit";
 }

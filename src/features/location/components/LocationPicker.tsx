@@ -28,7 +28,7 @@ export function LocationPicker({ defaultLocation }: LocationPickerProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <HeaderAction className="hidden lg:inline-flex">
+        <HeaderAction className="hidden xl:inline-flex">
           <MapPin className="size-5" aria-hidden />
           <span className="flex flex-col items-start leading-tight">
             <span className="text-xs font-normal text-navy-100">Deliver to</span>

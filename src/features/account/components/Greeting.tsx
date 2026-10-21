@@ -20,7 +20,7 @@ export async function Greeting({ name }: { name: string }) {
         Good {partOfDay}, {firstName}
       </h1>
       <p className="mt-1 text-sm text-gray-600 md:text-base">
-        Your bikes, services and orders in one place.
+        Your vehicles, services and orders in one place.
       </p>
     </div>
   );

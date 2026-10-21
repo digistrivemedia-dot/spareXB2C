@@ -33,13 +33,6 @@ export function ActiveFilterChips({ filters, brands }: ActiveFilterChipsProps) {
     });
   }
   if (filters.inStock) chips.push({ key: "stock", label: "In stock", without: { inStock: false } });
-  if (filters.minRating) {
-    chips.push({
-      key: "rating",
-      label: `${filters.minRating}★ & above`,
-      without: { minRating: undefined },
-    });
-  }
   if (filters.minDiscount) {
     chips.push({
       key: "discount",

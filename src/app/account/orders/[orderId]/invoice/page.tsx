@@ -8,7 +8,7 @@ import { PrintButton } from "@/components/ui/PrintButton";
 import { getOrder } from "@/features/orders/api";
 import { OrderAddress } from "@/features/orders/components/OrderAddress";
 import { OrderPriceSummary } from "@/features/orders/components/OrderPriceSummary";
-import { paymentMethodLabel } from "@/features/orders/utils";
+import { getPaymentLabel } from "@/features/orders/utils";
 import { SELLER } from "@/lib/constants";
 import { formatDate, formatPrice } from "@/lib/format";
 
@@ -46,7 +46,7 @@ export default async function InvoicePage({
             <h1 className="text-xl font-semibold text-gray-900">Tax invoice</h1>
             <p>Invoice no. {order.number}</p>
             <p>Date {formatDate(order.placedAt)}</p>
-            <p>Payment: {paymentMethodLabel[order.payment.method]}</p>
+            <p>Payment: {getPaymentLabel(order.payment)}</p>
           </div>
         </div>
 

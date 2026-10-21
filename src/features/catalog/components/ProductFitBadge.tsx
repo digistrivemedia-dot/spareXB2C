@@ -4,11 +4,11 @@ import { FitBadge } from "@/components/ui/FitBadge";
 import type { Fitment } from "@/features/catalog/types";
 import { getFitStatus } from "@/features/catalog/utils";
 import { useVehicleStore } from "@/features/vehicles/store";
-import { getBikeName } from "@/features/vehicles/utils";
+import { getVehicleName } from "@/features/vehicles/utils";
 
-/** Fit for the customer's selected bike. With no bike, a prompt that opens the bike selector. */
+/** Fit for the customer's selected vehicle. With no vehicle, a prompt that opens the vehicle selector. */
 export function ProductFitBadge({ fitment }: { fitment: Fitment }) {
-  const selectedBike = useVehicleStore((state) => state.selectedBike);
+  const selectedVehicle = useVehicleStore((state) => state.selectedVehicle);
   const hasHydrated = useVehicleStore((state) => state.hasHydrated);
   const openSelector = useVehicleStore((state) => state.setSelectorOpen);
 
@@ -16,7 +16,7 @@ export function ProductFitBadge({ fitment }: { fitment: Fitment }) {
     return <span className="block h-6 w-36 animate-pulse rounded-full bg-gray-100" aria-hidden />;
   }
 
-  if (!selectedBike) {
+  if (!selectedVehicle) {
     return (
       <button
         type="button"
@@ -29,6 +29,9 @@ export function ProductFitBadge({ fitment }: { fitment: Fitment }) {
   }
 
   return (
-    <FitBadge status={getFitStatus(fitment, selectedBike)} bikeName={getBikeName(selectedBike)} />
+    <FitBadge
+      status={getFitStatus(fitment, selectedVehicle)}
+      vehicleName={getVehicleName(selectedVehicle)}
+    />
   );
 }

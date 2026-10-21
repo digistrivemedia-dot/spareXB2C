@@ -5,9 +5,7 @@ import type {
   ProductFacets,
   ProductQuery,
   ProductSummary,
-  RatingBreakdown,
   RelatedProducts,
-  Review,
 } from "@/features/catalog/types";
 import { apiClient, orNull } from "@/lib/api-client";
 import { dataSource } from "@/lib/config";
@@ -15,11 +13,6 @@ import type { Paginated } from "@/lib/types";
 import { mockCatalog } from "@/mocks/catalog";
 
 const useMock = dataSource.catalog === "mock";
-
-export type ProductReviews = {
-  breakdown: RatingBreakdown;
-  reviews: Paginated<Review>;
-};
 
 export function getCategories(): Promise<Category[]> {
   return useMock ? mockCatalog.getCategories() : apiClient.get("/categories");
@@ -29,10 +22,11 @@ export function getBrands(): Promise<PartBrand[]> {
   return useMock ? mockCatalog.getBrands() : apiClient.get("/brands");
 }
 
-// The API takes the query flat: lists comma-separated, the bike as three fields.
-function toApiQuery({ brand, fits, ...rest }: ProductQuery) {
+// The API takes the query flat: lists comma-separated, the vehicle as three fields.
+function toApiQuery({ ids, brand, fits, ...rest }: ProductQuery) {
   return {
     ...rest,
+    ids: ids?.join(","),
     brand: brand?.join(","),
     fitsModel: fits?.modelId,
     fitsVariant: fits?.variantId,
@@ -52,12 +46,6 @@ export function getProductFacets(query: ProductQuery = {}): Promise<ProductFacet
 
 export function getProduct(slug: string): Promise<Product | null> {
   return useMock ? mockCatalog.getProduct(slug) : orNull(apiClient.get(`/products/${slug}`));
-}
-
-export function getProductReviews(productId: string, page = 1): Promise<ProductReviews | null> {
-  return useMock
-    ? mockCatalog.getProductReviews(productId, page)
-    : orNull(apiClient.get(`/products/${productId}/reviews`, { page }));
 }
 
 export function getRelatedProducts(productId: string): Promise<RelatedProducts | null> {

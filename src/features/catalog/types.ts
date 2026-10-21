@@ -1,4 +1,4 @@
-import type { VehicleRef } from "@/features/vehicles/types";
+import type { VehicleRef, VehicleType } from "@/features/vehicles/types";
 
 export type Category = {
   id: string;
@@ -21,18 +21,16 @@ export type FitmentVehicle = {
   years: number[];
 };
 
-export type Fitment = { kind: "universal" } | { kind: "specific"; vehicles: FitmentVehicle[] };
+/** Universal parts fit any model of the listed types, e.g. a helmet fits every bike and scooter. */
+export type Fitment =
+  | { kind: "universal"; vehicleTypes: VehicleType[] }
+  | { kind: "specific"; vehicles: FitmentVehicle[] };
 
 export type FitStatus = "fits" | "universal" | "no-fit";
 
 export type ProductImage = {
   url: string;
   alt: string;
-};
-
-export type RatingSummary = {
-  average: number;
-  count: number;
 };
 
 /** What listings and rails return. */
@@ -46,13 +44,10 @@ export type ProductSummary = {
   sku: string;
   priceInPaise: number;
   mrpInPaise: number;
-  rating: RatingSummary;
   stockQuantity: number;
   image: ProductImage | null;
   fitment: Fitment;
   isGenuine: boolean;
-  /** Whether Kannali Garage can fit it for the customer (riding gear, for example, can't be). */
-  isInstallable: boolean;
   warrantyMonths: number | null;
   createdAt: string;
 };
@@ -76,24 +71,8 @@ export type RelatedProducts = {
   similar: ProductSummary[];
 };
 
-export type Review = {
-  id: string;
-  productId: string;
-  authorName: string;
-  rating: number;
-  title: string;
-  body: string;
-  isVerifiedPurchase: boolean;
-  createdAt: string;
-};
-
-export type RatingBreakdown = RatingSummary & {
-  /** Number of reviews per star, index 0 = 1 star … index 4 = 5 stars. */
-  distribution: [number, number, number, number, number];
-};
-
 export type ProductSort =
-  "relevance" | "price-asc" | "price-desc" | "newest" | "rating" | "discount" | "popular";
+  "relevance" | "price-asc" | "price-desc" | "newest" | "discount" | "popular";
 
 export type FacetCount = {
   slug: string;
@@ -109,15 +88,16 @@ export type ProductFacets = {
 
 /** Every filter the listing understands. Prices are in paise, like everywhere else in the API. */
 export type ProductQuery = {
+  /** Only these products, e.g. the customer's saved items or a shelf picked in the admin panel. */
+  ids?: string[];
   q?: string;
   category?: string;
   brand?: string[];
   /** Only parts that fit this vehicle (universal parts included). */
-  fits?: Pick<VehicleRef, "modelId" | "variantId" | "year">;
+  fits?: Pick<VehicleRef, "type" | "modelId" | "variantId" | "year">;
   minPriceInPaise?: number;
   maxPriceInPaise?: number;
   inStock?: boolean;
-  minRating?: number;
   minDiscountPercent?: number;
   hasWarranty?: boolean;
   sort?: ProductSort;

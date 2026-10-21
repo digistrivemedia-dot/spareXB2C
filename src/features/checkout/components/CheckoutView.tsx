@@ -9,15 +9,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { Address } from "@/features/account/types";
 import { useCartStore } from "@/features/cart/store";
 import { CheckoutForm } from "@/features/checkout/components/CheckoutForm";
-import type { MyBike } from "@/features/vehicles/types";
+import type { MyVehicle } from "@/features/vehicles/types";
 
 type CheckoutViewProps = {
   addresses: Address[];
-  bikes: MyBike[];
+  vehicles: MyVehicle[];
+  savedGstin: string | null;
 };
 
 /** Waits for the saved cart, then shows the form, or a way back to shopping if it's empty. */
-export function CheckoutView({ addresses, bikes }: CheckoutViewProps) {
+export function CheckoutView({ addresses, vehicles, savedGstin }: CheckoutViewProps) {
   const hasHydrated = useCartStore((state) => state.hasHydrated);
   const isEmpty = useCartStore((state) => state.items.length === 0);
 
@@ -48,5 +49,5 @@ export function CheckoutView({ addresses, bikes }: CheckoutViewProps) {
     );
   }
 
-  return <CheckoutForm addresses={addresses} bikes={bikes} />;
+  return <CheckoutForm addresses={addresses} vehicles={vehicles} savedGstin={savedGstin} />;
 }

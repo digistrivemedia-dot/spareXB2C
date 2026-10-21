@@ -33,9 +33,14 @@ export function LastServiceCard({ record }: { record: ServiceRecord | null }) {
                 {formatPrice(record.billTotalInPaise)}
               </span>
             </p>
-            <Button asChild variant="secondary" size="sm">
-              <Link href={`/account/services/${record.id}`}>View bill</Link>
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild variant="ghost" size="sm">
+                <Link href={`/account/vehicles/${record.vehicleId}/history`}>All services</Link>
+              </Button>
+              <Button asChild variant="secondary" size="sm">
+                <Link href={`/account/services/${record.id}/bill`}>View bill</Link>
+              </Button>
+            </div>
           </div>
         </>
       ) : (

@@ -2,6 +2,7 @@ import { Truck } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Card } from "@/components/ui/Card";
@@ -14,7 +15,8 @@ import { OrderAddress } from "@/features/orders/components/OrderAddress";
 import { OrderPriceSummary } from "@/features/orders/components/OrderPriceSummary";
 import { OrderStatusBadge } from "@/features/orders/components/OrderStatusBadge";
 import { OrderStatusNotice } from "@/features/orders/components/OrderStatusNotice";
-import { getOrderProgress, isSameAddress, paymentMethodLabel } from "@/features/orders/utils";
+import { getOrderProgress, getPaymentLabel, isSameAddress } from "@/features/orders/utils";
+import { OrderReturnsCard } from "@/features/returns/components/OrderReturnsCard";
 import { formatDate, formatPrice, toIndianIsoDate } from "@/lib/format";
 
 export async function generateMetadata({
@@ -27,13 +29,19 @@ export async function generateMetadata({
 export default async function OrderDetailsPage({ params }: PageProps<"/account/orders/[orderId]">) {
   const order = await getOrder((await params).orderId);
   if (!order) notFound();
+  // "Can I still return this?" depends on today's date, so the page is rendered per request.
+  await connection();
 
   const { steps, activeStep } = getOrderProgress(order);
   const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
   const sameBilling = isSameAddress(order.billingAddress, order.deliveryAddress);
   const paymentStatus = {
     paid: "Paid",
-    pending: `Pay ${formatPrice(order.pricing.totalInPaise)} on delivery`,
+    pending:
+      order.payment.method === "cod"
+        ? `Pay ${formatPrice(order.pricing.totalInPaise)} on delivery`
+        : "Not paid yet",
+    failed: "Payment failed",
     refunded: "Refunded",
   }[order.payment.status];
 
@@ -51,7 +59,7 @@ export default async function OrderDetailsPage({ params }: PageProps<"/account/o
           <h1 className="text-2xl font-semibold text-gray-900 md:text-3xl">Order {order.number}</h1>
           <p className="mt-1 text-sm text-gray-600">
             Placed {formatDate(order.placedAt)}
-            {order.bike && ` · For your ${order.bike.name}`}
+            {order.vehicle && ` · For your ${order.vehicle.name}`}
           </p>
         </div>
         <OrderStatusBadge status={order.status} />
@@ -129,12 +137,14 @@ export default async function OrderDetailsPage({ params }: PageProps<"/account/o
         <Card aria-labelledby="order-payment-heading" className="grid content-start gap-4">
           <SectionHeader id="order-payment-heading" title="Payment" />
           <p className="text-sm text-gray-700">
-            {paymentMethodLabel[order.payment.method]} ·{" "}
+            {getPaymentLabel(order.payment)} ·{" "}
             <span className="font-semibold text-gray-900">{paymentStatus}</span>
           </p>
           <OrderPriceSummary pricing={order.pricing} itemCount={itemCount} />
         </Card>
       </div>
+
+      <OrderReturnsCard returns={order.returns} />
 
       <OrderActions order={order} today={toIndianIsoDate(new Date())} />
     </div>

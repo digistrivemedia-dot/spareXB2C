@@ -8,7 +8,6 @@ export const SUPPORT_HOURS = "Mon–Sat, 9:00 AM–8:00 PM";
 
 export const FREE_DELIVERY_THRESHOLD_IN_PAISE = 49900;
 export const DELIVERY_FEE_IN_PAISE = 4900;
-export const INSTALLATION_FEE_IN_PAISE = 14900;
 
 /** Most of one part a customer can order; bulk buyers use the B2B site. */
 export const MAX_QUANTITY_PER_ITEM = 10;

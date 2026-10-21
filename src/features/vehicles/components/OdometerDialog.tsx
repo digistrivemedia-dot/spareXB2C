@@ -22,13 +22,18 @@ import { type OdometerFormValues, odometerSchema } from "@/features/vehicles/sch
 import { formatDate, formatKm } from "@/lib/format";
 
 type OdometerDialogProps = {
-  bikeId: string;
-  bikeName: string;
+  vehicleId: string;
+  vehicleName: string;
   currentKm: number;
   updatedAt: string;
 };
 
-export function OdometerDialog({ bikeId, bikeName, currentKm, updatedAt }: OdometerDialogProps) {
+export function OdometerDialog({
+  vehicleId,
+  vehicleName,
+  currentKm,
+  updatedAt,
+}: OdometerDialogProps) {
   const [open, setOpen] = useState(false);
   const form = useForm<OdometerFormValues>({
     resolver: zodResolver(odometerSchema(currentKm)),
@@ -36,7 +41,7 @@ export function OdometerDialog({ bikeId, bikeName, currentKm, updatedAt }: Odome
   });
 
   async function onSubmit(values: OdometerFormValues) {
-    const result = await updateOdometerAction(bikeId, values);
+    const result = await updateOdometerAction(vehicleId, values);
     if (!result.ok) {
       form.setError("km", { message: result.message });
       return;
@@ -62,7 +67,7 @@ export function OdometerDialog({ bikeId, bikeName, currentKm, updatedAt }: Odome
         <DialogHeader>
           <DialogTitle>Update odometer</DialogTitle>
           <DialogDescription>
-            Keeps service reminders for your {bikeName} accurate.
+            Keeps service reminders for your {vehicleName} accurate.
           </DialogDescription>
         </DialogHeader>
         <form id="odometer-form" onSubmit={form.handleSubmit(onSubmit)} noValidate>

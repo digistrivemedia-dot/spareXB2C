@@ -38,9 +38,6 @@ export function OrderPriceSummary({
             tone="saving"
           />
         )}
-        {pricing.installationFeeInPaise > 0 && (
-          <PriceRow label="Installation" value={formatPrice(pricing.installationFeeInPaise)} />
-        )}
         <PriceRow
           label="Delivery"
           value={

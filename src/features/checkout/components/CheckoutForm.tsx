@@ -8,64 +8,68 @@ import { toast } from "sonner";
 
 import { MobileActionBar } from "@/components/layout/MobileActionBar";
 import { Button } from "@/components/ui/button";
+import { emptyAddressFields } from "@/features/account/schema";
 import type { Address } from "@/features/account/types";
-import { useCartStore } from "@/features/cart/store";
+import { selectCoupon, useCartStore } from "@/features/cart/store";
 import { getCartTotals } from "@/features/cart/utils";
 import { placeOrderAction } from "@/features/checkout/actions";
 import { AddressSection } from "@/features/checkout/components/AddressSection";
-import { BikeSection } from "@/features/checkout/components/BikeSection";
 import { CheckoutStep } from "@/features/checkout/components/CheckoutStep";
 import { CheckoutSummary } from "@/features/checkout/components/CheckoutSummary";
 import { PaymentSection } from "@/features/checkout/components/PaymentSection";
+import { VehicleSection } from "@/features/checkout/components/VehicleSection";
+import { useOrderPayment } from "@/features/payments/useOrderPayment";
 import { type CheckoutValues, checkoutSchema } from "@/features/checkout/schema";
 import { useVehicleStore } from "@/features/vehicles/store";
-import type { MyBike } from "@/features/vehicles/types";
+import type { MyVehicle } from "@/features/vehicles/types";
 import { formatPrice } from "@/lib/format";
 
 type CheckoutFormProps = {
   addresses: Address[];
-  bikes: MyBike[];
+  vehicles: MyVehicle[];
+  /** From the customer's profile, filled in when they ask for a GST invoice. */
+  savedGstin: string | null;
 };
 
 const FORM_ID = "checkout-form";
 
-/** Mounted once the cart has loaded, so the defaults (like the shop's selected bike) are known. */
-export function CheckoutForm({ addresses, bikes }: CheckoutFormProps) {
+/** Mounted once the cart has loaded, so the defaults (like the shop's selected vehicle) are known. */
+export function CheckoutForm({ addresses, vehicles, savedGstin }: CheckoutFormProps) {
   const router = useRouter();
   const [isPlacing, startTransition] = useTransition();
+  const { pay, isBusy: isPaying, paymentWindow } = useOrderPayment();
   const items = useCartStore((state) => state.items);
-  const coupon = useCartStore((state) => state.coupon);
-  const selectedBike = useVehicleStore((state) => state.selectedBike);
+  const coupon = useCartStore(selectCoupon);
+  const selectedVehicle = useVehicleStore((state) => state.selectedVehicle);
   const totals = getCartTotals(items, coupon);
 
   const form = useForm<CheckoutValues>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
       addressId: addresses.find((a) => a.isDefault)?.id ?? (addresses.length ? "" : "new"),
-      newAddress: { name: "", mobile: "", pin: "", line1: "", area: "", city: "", state: "" },
+      address: emptyAddressFields,
       billingSameAsDelivery: true,
       billingAddressId: "",
       wantsGstInvoice: false,
-      gstin: "",
-      bikeId: bikes.find((b) => b.id === selectedBike?.myBikeId)?.id ?? "",
+      gstin: savedGstin ?? "",
+      vehicleId: vehicles.find((b) => b.id === selectedVehicle?.myVehicleId)?.id ?? "",
+      paymentMode: "online",
     },
   });
 
   function placeOrder(values: CheckoutValues) {
-    const lines = items.map(({ productId, quantity, withInstallation }) => ({
-      productId,
-      quantity,
-      withInstallation,
-    }));
+    const lines = items.map(({ productId, quantity }) => ({ productId, quantity }));
     startTransition(async () => {
       const result = await placeOrderAction(values, { lines, couponCode: coupon?.code ?? null });
       if (!result.ok) {
         toast.error(result.message);
         return;
       }
-      router.replace(`/checkout/success?order=${result.orderId}`);
+      if (values.paymentMode === "cod") router.replace(`/checkout/success?order=${result.orderId}`);
+      else await pay(result.orderId);
     });
   }
+  const isBusy = isPlacing || isPaying;
 
   return (
     <FormProvider {...form}>
@@ -81,8 +85,8 @@ export function CheckoutForm({ addresses, bikes }: CheckoutFormProps) {
           <CheckoutStep number={1} title="Delivery address">
             <AddressSection addresses={addresses} />
           </CheckoutStep>
-          <CheckoutStep number={2} title="Bike for this order" note="Optional">
-            <BikeSection bikes={bikes} />
+          <CheckoutStep number={2} title="Vehicle for this order" note="Optional">
+            <VehicleSection vehicles={vehicles} />
           </CheckoutStep>
           <CheckoutStep number={3} title="Payment">
             <PaymentSection />
@@ -90,7 +94,7 @@ export function CheckoutForm({ addresses, bikes }: CheckoutFormProps) {
         </div>
         <div className="lg:col-span-4">
           <div className="lg:sticky lg:top-24">
-            <CheckoutSummary items={items} totals={totals} formId={FORM_ID} isPlacing={isPlacing} />
+            <CheckoutSummary items={items} totals={totals} formId={FORM_ID} isPlacing={isBusy} />
           </div>
         </div>
       </form>
@@ -102,10 +106,11 @@ export function CheckoutForm({ addresses, bikes }: CheckoutFormProps) {
             {formatPrice(totals.totalInPaise)}
           </span>
         </p>
-        <Button type="submit" form={FORM_ID} disabled={isPlacing}>
-          {isPlacing ? "Placing…" : "Place order"}
+        <Button type="submit" form={FORM_ID} disabled={isBusy}>
+          {isBusy ? "Placing…" : "Place order"}
         </Button>
       </MobileActionBar>
+      {paymentWindow}
     </FormProvider>
   );
 }

@@ -4,6 +4,8 @@ export type User = {
   /** 10-digit Indian mobile number without the country code. */
   mobile: string;
   email: string | null;
+  /** For GST invoices on business purchases; filled in at checkout. */
+  gstin: string | null;
   createdAt: string;
 };
 

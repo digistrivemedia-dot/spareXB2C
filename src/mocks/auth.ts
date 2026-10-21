@@ -5,10 +5,16 @@ const demoUser: User = {
   name: "Arjun Rao",
   mobile: "9845012345",
   email: "arjun.rao@example.com",
+  gstin: null,
   createdAt: "2025-11-04T18:32:00+05:30",
 };
 
-// The demo "token" just carries the user, so no server memory is needed. Never do this with real auth.
+const WRONG_DEMO_OTP = "000000";
+
+// Profile changes, by user id. Demo data lives in memory, so they last until the server restarts.
+const savedUsers = new Map<string, User>([[demoUser.id, demoUser]]);
+
+// The demo "token" just carries the user's id and sign-up details. Never do this with real auth.
 const encode = (user: User) => `demo.${Buffer.from(JSON.stringify(user)).toString("base64url")}`;
 
 function decode(token: string): User | null {
@@ -25,8 +31,14 @@ export const mockAuth = {
     return { isNewUser: mobile !== demoUser.mobile, resendAfterSeconds: 30 };
   },
 
-  // Demo: any 6-digit code is accepted. New numbers need a name, which creates the account.
-  async verifyOtp(mobile: string, name: string | null): Promise<OtpVerification | null> {
+  // Demo: any 6-digit code except 000000 is accepted, so the wrong-code message can be shown.
+  // New numbers need a name, which creates the account.
+  async verifyOtp(
+    mobile: string,
+    otp: string,
+    name: string | null,
+  ): Promise<OtpVerification | null> {
+    if (otp === WRONG_DEMO_OTP) return null;
     if (mobile === demoUser.mobile) return { token: encode(demoUser), user: demoUser };
     if (!name) return null;
     const user: User = {
@@ -34,6 +46,7 @@ export const mockAuth = {
       name,
       mobile,
       email: null,
+      gstin: null,
       createdAt: new Date().toISOString(),
     };
     return { token: encode(user), user };
@@ -41,6 +54,11 @@ export const mockAuth = {
 
   async getSession(token: string): Promise<Session | null> {
     const user = decode(token);
-    return user ? { user } : null;
+    return user ? { user: savedUsers.get(user.id) ?? user } : null;
+  },
+
+  async updateUser(user: User): Promise<User> {
+    savedUsers.set(user.id, user);
+    return user;
   },
 };

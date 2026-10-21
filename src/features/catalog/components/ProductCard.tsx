@@ -1,7 +1,6 @@
 import Link from "next/link";
 
 import { Price } from "@/components/ui/Price";
-import { Rating } from "@/components/ui/Rating";
 import { AddToCartButton } from "@/features/cart/components/AddToCartButton";
 import { ProductFitBadge } from "@/features/catalog/components/ProductFitBadge";
 import { ProductImage } from "@/features/catalog/components/ProductImage";
@@ -38,7 +37,6 @@ export function ProductCard({ product }: { product: ProductSummary }) {
             {product.name}
           </Link>
         </h3>
-        <Rating average={product.rating.average} count={product.rating.count} />
         <Price priceInPaise={product.priceInPaise} mrpInPaise={product.mrpInPaise} />
         <ProductFitBadge fitment={product.fitment} />
         {stockQuantity > 0 && stockQuantity <= LOW_STOCK_THRESHOLD && (

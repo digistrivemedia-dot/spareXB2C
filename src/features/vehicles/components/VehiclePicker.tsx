@@ -3,6 +3,7 @@ import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { SelectField } from "@/components/ui/SelectField";
 import type { VehicleCatalog, VehicleRef, VehicleType } from "@/features/vehicles/types";
+import { vehicleTypes } from "@/features/vehicles/utils";
 
 type VehiclePickerProps = {
   catalog: VehicleCatalog;
@@ -17,11 +18,6 @@ type Choice = {
   variantId?: string;
   year?: number;
 };
-
-const vehicleTypes: { value: VehicleType; label: string }[] = [
-  { value: "bike", label: "Bike" },
-  { value: "scooter", label: "Scooter" },
-];
 
 /** Type → Brand → Model → Variant → Year. Changing a step clears the steps after it. */
 export function VehiclePicker({ catalog, submitLabel, onSubmit }: VehiclePickerProps) {
@@ -50,6 +46,7 @@ export function VehiclePicker({ catalog, submitLabel, onSubmit }: VehiclePickerP
     event.preventDefault();
     if (!brand || !model || !variant || !choice.year) return;
     onSubmit({
+      type: model.type,
       modelId: model.id,
       variantId: variant.id,
       year: choice.year,
@@ -64,7 +61,7 @@ export function VehiclePicker({ catalog, submitLabel, onSubmit }: VehiclePickerP
       <SelectField
         id={`${id}-type`}
         label="Type"
-        placeholder="Bike or scooter"
+        placeholder="Select type"
         value={choice.type}
         options={vehicleTypes}
         onChange={(type) => setChoice({ type: type as VehicleType })}

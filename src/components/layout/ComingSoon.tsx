@@ -11,7 +11,7 @@ export function ComingSoon({ title }: { title: string }) {
       icon={Hammer}
       titleAs="h1"
       title={`${title} is coming soon`}
-      description="We're building this part of Kannali Garage. Meanwhile, you can shop parts that fit your bike."
+      description="We're building this part of Kannali Garage. Meanwhile, you can shop parts that fit your vehicle."
     >
       <Button asChild>
         <Link href="/products">Shop parts</Link>

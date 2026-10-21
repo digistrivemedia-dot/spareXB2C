@@ -1,9 +1,18 @@
 import type { Metadata } from "next";
 
-import { ComingSoon } from "@/components/layout/ComingSoon";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { SavedItems } from "@/features/wishlist/components/SavedItems";
 
-export const metadata: Metadata = { title: "Saved items" };
+export const metadata: Metadata = { title: "Saved parts" };
 
 export default function SavedPage() {
-  return <ComingSoon title="Your wishlist" />;
+  return (
+    <div className="grid grid-cols-1 gap-6">
+      <PageHeader
+        title="Saved parts"
+        description="Parts you saved with the heart, ready when you are."
+      />
+      <SavedItems />
+    </div>
+  );
 }

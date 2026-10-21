@@ -7,9 +7,8 @@ import { Container } from "@/components/layout/Container";
 import { Section } from "@/components/layout/Section";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Price } from "@/components/ui/Price";
-import { Rating } from "@/components/ui/Rating";
 import { PurchasePanel } from "@/features/cart/components/PurchasePanel";
-import { getProduct, getProductReviews, getRelatedProducts } from "@/features/catalog/api";
+import { getProduct, getRelatedProducts } from "@/features/catalog/api";
 import { FitmentBox } from "@/features/catalog/components/FitmentBox";
 import { ProductGallery } from "@/features/catalog/components/ProductGallery";
 import { ProductRail } from "@/features/catalog/components/ProductRail";
@@ -31,8 +30,7 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
   const product = await getProduct((await params).slug);
   if (!product) notFound();
 
-  const [reviews, related, vehicleCatalog, defaultLocation] = await Promise.all([
-    getProductReviews(product.id),
+  const [related, vehicleCatalog, defaultLocation] = await Promise.all([
     getRelatedProducts(product.id),
     getVehicleCatalog(),
     getDefaultLocation(),
@@ -77,9 +75,6 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
               <p className="text-sm text-gray-500">
                 Part no. {product.partNumber} · SKU {product.sku}
               </p>
-              <a href="#details" className="w-fit">
-                <Rating average={product.rating.average} count={product.rating.count} />
-              </a>
             </div>
 
             <div>
@@ -118,7 +113,7 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
           </div>
         </div>
 
-        <ProductTabs product={product} reviews={reviews} vehicleCatalog={vehicleCatalog} />
+        <ProductTabs product={product} vehicleCatalog={vehicleCatalog} />
       </Container>
 
       {related && related.boughtTogether.length > 0 && (

@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { Container } from "@/components/layout/Container";
 import { Logo } from "@/components/layout/Logo";
+import { features } from "@/lib/config";
 import { SITE_NAME, SUPPORT_EMAIL, SUPPORT_HOURS, SUPPORT_PHONE } from "@/lib/constants";
 import { formatMobile } from "@/lib/format";
 import { footerNav } from "@/lib/navigation";
@@ -14,7 +15,7 @@ const paymentMethods = [
   "RuPay",
   "Net banking",
   "Wallets",
-  "Cash on delivery",
+  ...(features.cashOnDelivery ? ["Cash on delivery"] : []),
 ];
 
 export function Footer() {
@@ -24,8 +25,8 @@ export function Footer() {
         <div className="col-span-2">
           <Logo />
           <p className="mt-4 max-w-sm">
-            {SITE_NAME} services bikes and scooters across Bengaluru. SpareX is our parts store:
-            genuine brands, checked to fit your bike.
+            {SITE_NAME} services bikes, scooters, cars and commercial vehicles across Bengaluru.
+            SpareX is our parts store: genuine brands, checked to fit your vehicle.
           </p>
           <ul className="mt-5 grid gap-3">
             <li>

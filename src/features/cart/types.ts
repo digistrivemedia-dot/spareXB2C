@@ -12,7 +12,4 @@ export type CartItem = {
   stockQuantity: number;
   fitment: Fitment;
   quantity: number;
-  isInstallable: boolean;
-  /** The customer asked Kannali Garage to fit this part. */
-  withInstallation: boolean;
 };

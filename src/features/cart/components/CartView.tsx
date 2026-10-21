@@ -11,14 +11,14 @@ import { CartSkeleton } from "@/features/cart/components/CartSkeleton";
 import { CartSummary } from "@/features/cart/components/CartSummary";
 import { FitWarning } from "@/features/cart/components/FitWarning";
 import { MobileCheckoutBar } from "@/features/cart/components/MobileCheckoutBar";
-import { useCartStore } from "@/features/cart/store";
+import { selectCoupon, useCartStore } from "@/features/cart/store";
 import { getCartTotals } from "@/features/cart/utils";
 import type { Coupon } from "@/features/promotions/types";
 
 /** The cart lives in the browser, so it renders once the saved cart has loaded. */
 export function CartView({ offers }: { offers: Coupon[] }) {
   const items = useCartStore((state) => state.items);
-  const coupon = useCartStore((state) => state.coupon);
+  const coupon = useCartStore(selectCoupon);
   const hasHydrated = useCartStore((state) => state.hasHydrated);
 
   if (!hasHydrated) return <CartSkeleton />;
@@ -29,7 +29,7 @@ export function CartView({ offers }: { offers: Coupon[] }) {
         icon={ShoppingCart}
         titleAs="h1"
         title="Your cart is empty"
-        description="Find parts that fit your bike, from engine oil to brake pads."
+        description="Find parts that fit your vehicle, from engine oil to brake pads."
       >
         <Button asChild>
           <Link href="/products">Start shopping</Link>

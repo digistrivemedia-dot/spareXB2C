@@ -1,32 +1,32 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-import type { SelectedBike } from "@/features/vehicles/types";
+import type { SelectedVehicle } from "@/features/vehicles/types";
 
 type VehicleState = {
-  selectedBike: SelectedBike | null;
-  /** False until the saved bike has been read from localStorage; avoids flashing "Select your bike". */
+  selectedVehicle: SelectedVehicle | null;
+  /** False until the saved vehicle has been read from localStorage; avoids flashing "Select your vehicle". */
   hasHydrated: boolean;
-  /** The header's bike selector dialog, so any "Select your bike" prompt on the page can open it. */
+  /** The header's vehicle selector dialog, so any "Select your vehicle" prompt on the page can open it. */
   isSelectorOpen: boolean;
-  selectBike: (bike: SelectedBike) => void;
+  selectVehicle: (vehicle: SelectedVehicle) => void;
   setSelectorOpen: (open: boolean) => void;
 };
 
 export const useVehicleStore = create<VehicleState>()(
   persist(
     (set) => ({
-      selectedBike: null,
+      selectedVehicle: null,
       hasHydrated: false,
       isSelectorOpen: false,
-      selectBike: (bike) => set({ selectedBike: bike }),
+      selectVehicle: (vehicle) => set({ selectedVehicle: vehicle }),
       setSelectorOpen: (open) => set({ isSelectorOpen: open }),
     }),
     {
-      name: "kg-selected-bike",
+      name: "kg-selected-vehicle",
       // Rehydrated on the client by StoreHydration, so server and first client render match.
       skipHydration: true,
-      partialize: ({ selectedBike }) => ({ selectedBike }),
+      partialize: ({ selectedVehicle }) => ({ selectedVehicle }),
       onRehydrateStorage: () => () => useVehicleStore.setState({ hasHydrated: true }),
     },
   ),

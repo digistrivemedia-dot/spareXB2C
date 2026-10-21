@@ -38,17 +38,19 @@ function buildUrl(path: string, query?: Record<string, QueryValue>): string {
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = "GET", query, body, headers, signal } = options;
+  // Files go as multipart form data, where fetch sets the Content-Type (with its boundary) itself.
+  const isJson = body !== undefined && !(body instanceof FormData);
 
   const response = await fetch(buildUrl(path, query), {
     method,
     signal,
     headers: {
       Accept: "application/json",
-      ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+      ...(isJson ? { "Content-Type": "application/json" } : {}),
       ...(await getAuthHeaders()),
       ...headers,
     },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: body instanceof FormData ? body : isJson ? JSON.stringify(body) : undefined,
   });
 
   const data: unknown =

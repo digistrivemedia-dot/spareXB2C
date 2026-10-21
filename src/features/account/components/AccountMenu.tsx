@@ -38,7 +38,7 @@ export function AccountMenu({ user }: AccountMenuProps) {
           <span className="flex size-8 items-center justify-center rounded-full bg-navy-600 text-xs font-semibold">
             {initials}
           </span>
-          <span className="hidden lg:inline">{firstName}</span>
+          <span className="hidden xl:inline">{firstName}</span>
           <ChevronDown className="hidden size-4 lg:block" aria-hidden />
         </HeaderAction>
       </DropdownMenuTrigger>

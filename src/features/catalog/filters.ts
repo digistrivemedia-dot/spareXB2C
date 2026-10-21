@@ -1,16 +1,16 @@
 import type { ProductQuery, ProductSort } from "@/features/catalog/types";
 import type { VehicleRef } from "@/features/vehicles/types";
-import { getBikeName } from "@/features/vehicles/utils";
+import { getVehicleName } from "@/features/vehicles/utils";
 import { getSearchParam, type SearchParams } from "@/lib/search-params";
 
-export const PRODUCTS_PAGE_SIZE = 12;
+const PRODUCTS_PAGE_SIZE = 12;
 
 export const sortOptions: { value: ProductSort; label: string }[] = [
   { value: "relevance", label: "Relevance" },
+  { value: "popular", label: "Most popular" },
   { value: "price-asc", label: "Price: low to high" },
   { value: "price-desc", label: "Price: high to low" },
   { value: "newest", label: "Newest" },
-  { value: "rating", label: "Top rated" },
   { value: "discount", label: "Biggest discount" },
 ];
 
@@ -23,12 +23,13 @@ export type ProductFilters = {
   category?: string;
   brands: string[];
   /** "<variantId>.<year>"; only filters when `fits` is on. */
-  bike?: string;
+  vehicle?: string;
   fits: boolean;
+  /** The customer chose "Show all parts", so a selected vehicle doesn't filter the list. */
+  showAll: boolean;
   minPrice?: number;
   maxPrice?: number;
   inStock: boolean;
-  minRating?: number;
   minDiscount?: number;
   warranty: boolean;
   sort: ProductSort;
@@ -48,12 +49,12 @@ export function parseProductFilters(params: SearchParams): ProductFilters {
     q: get("q"),
     category: get("category"),
     brands: get("brand")?.split(",").filter(Boolean) ?? [],
-    bike: get("bike"),
+    vehicle: get("vehicle"),
     fits: get("fits") === "true",
+    showAll: get("all") === "true",
     minPrice: positiveInt(get("minPrice")),
     maxPrice: positiveInt(get("maxPrice")),
     inStock: get("inStock") === "true",
-    minRating: positiveInt(get("rating")),
     minDiscount: positiveInt(get("discount")),
     warranty: get("warranty") === "true",
     sort,
@@ -78,12 +79,12 @@ export function productsHref(
   set("q", next.q);
   set("category", next.category);
   set("brand", next.brands.join(","));
-  set("bike", next.bike);
-  set("fits", next.fits && Boolean(next.bike));
+  set("vehicle", next.vehicle);
+  set("fits", next.fits && Boolean(next.vehicle));
+  set("all", next.showAll && !next.fits);
   set("minPrice", next.minPrice);
   set("maxPrice", next.maxPrice);
   set("inStock", next.inStock);
-  set("rating", next.minRating);
   set("discount", next.minDiscount);
   set("warranty", next.warranty);
   if (next.sort !== "relevance") set("sort", next.sort);
@@ -93,18 +94,17 @@ export function productsHref(
   return query ? `/products?${query}` : "/products";
 }
 
-/** The API query for these filters; `bike` is the parsed `bike` param, when fit filtering is on. */
-export function toProductQuery(filters: ProductFilters, bike: VehicleRef | null): ProductQuery {
+/** The API query for these filters; `vehicle` is the parsed `vehicle` param, when fit filtering is on. */
+export function toProductQuery(filters: ProductFilters, vehicle: VehicleRef | null): ProductQuery {
   const toPaise = (rupees: number | undefined) => (rupees === undefined ? undefined : rupees * 100);
   return {
     q: filters.q,
     category: filters.category,
     brand: filters.brands,
-    fits: bike ?? undefined,
+    fits: vehicle ?? undefined,
     minPriceInPaise: toPaise(filters.minPrice),
     maxPriceInPaise: toPaise(filters.maxPrice),
     inStock: filters.inStock,
-    minRating: filters.minRating,
     minDiscountPercent: filters.minDiscount,
     hasWarranty: filters.warranty,
     sort: filters.sort,
@@ -113,13 +113,12 @@ export function toProductQuery(filters: ProductFilters, bike: VehicleRef | null)
   };
 }
 
-/** What "Clear all" resets: every filter, but not where the customer is (search, category, bike). */
+/** What "Clear all" resets: every filter, but not where the customer is (search, category, vehicle). */
 export const clearedFilters: Partial<ProductFilters> = {
   brands: [],
   minPrice: undefined,
   maxPrice: undefined,
   inStock: false,
-  minRating: undefined,
   minDiscount: undefined,
   warranty: false,
 };
@@ -130,19 +129,18 @@ export function countActiveFilters(filters: ProductFilters): number {
     filters.brands.length +
     Number(Boolean(filters.minPrice || filters.maxPrice)) +
     Number(filters.inStock) +
-    Number(Boolean(filters.minRating)) +
     Number(Boolean(filters.minDiscount)) +
     Number(filters.warranty)
   );
 }
 
-/** "Brakes for KTM Duke 200", "Results for “motul”", "Brakes" or "All parts". */
+/** "Results for “motul”", "Brakes for KTM Duke 200", "Brakes" or "All parts". */
 export function getListingTitle(
   filters: ProductFilters,
   categoryName: string | undefined,
-  fitBike: VehicleRef | null,
+  fitVehicle: VehicleRef | null,
 ): string {
-  if (fitBike) return `${categoryName ?? "Parts"} for ${getBikeName(fitBike)}`;
   if (filters.q) return `Results for “${filters.q}”`;
+  if (fitVehicle) return `${categoryName ?? "Parts"} for ${getVehicleName(fitVehicle)}`;
   return categoryName ?? "All parts";
 }

@@ -6,8 +6,8 @@ stored locally, then cropped and resized for the site.
 
 | File | Photo | Photographer |
 |---|---|---|
-| `bikes/ktm-duke-200.jpg` | [KTM Duke, white and orange](https://unsplash.com/photos/white-orange-and-black-sports-bike-ffWkCBNXEuk) | Sumit Saharkar |
-| `bikes/honda-activa-6g.jpg` | [Blue Honda Activa under a flowering tree](https://unsplash.com/photos/blue-scooter-parked-beneath-flowering-tree-nkEUnrXoNCM) | Zoshua Colah |
+| `vehicles/ktm-duke-200.jpg` | [KTM Duke, white and orange](https://unsplash.com/photos/white-orange-and-black-sports-bike-ffWkCBNXEuk) | Sumit Saharkar |
+| `vehicles/honda-activa-6g.jpg` | [Blue Honda Activa under a flowering tree](https://unsplash.com/photos/blue-scooter-parked-beneath-flowering-tree-nkEUnrXoNCM) | Zoshua Colah |
 | `banners/monsoon-brakes.jpg` | [Motorcycle front brake](https://unsplash.com/photos/sKGyaOusfLQ) | Ronnzy Moto |
 | `banners/engine-oil-offer.jpg` | [Technician repairing a scooter engine](https://unsplash.com/photos/a-man-is-working-on-a-motorcycle-engine-v4aNBdn_gAU) | Mufid Majnun |
 | `banners/pickup-drop.jpg` | [Man working on a motorcycle in a garage](https://unsplash.com/photos/a-man-working-on-a-motorcycle-in-a-garage-4ORysIjH-mY) | Angry._.Kat |

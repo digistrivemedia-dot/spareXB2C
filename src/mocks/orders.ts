@@ -6,21 +6,19 @@ import type {
   OrderPricing,
   OrderQuery,
   OrderStatus,
+  PaymentMethod,
   PlaceOrderInput,
 } from "@/features/orders/types";
 import { getCouponDiscount } from "@/features/promotions/utils";
-import { getBikeName } from "@/features/vehicles/utils";
+import { getVehicleName } from "@/features/vehicles/utils";
+import { DELIVERY_FEE_IN_PAISE, FREE_DELIVERY_THRESHOLD_IN_PAISE } from "@/lib/constants";
 import { toIndianIsoDate } from "@/lib/format";
-import {
-  DELIVERY_FEE_IN_PAISE,
-  FREE_DELIVERY_THRESHOLD_IN_PAISE,
-  INSTALLATION_FEE_IN_PAISE,
-} from "@/lib/constants";
 import type { Paginated } from "@/lib/types";
 import { addresses } from "@/mocks/account";
 import { findProductById } from "@/mocks/catalog";
 import { mockLocation } from "@/mocks/location";
 import { mockPromotions } from "@/mocks/promotions";
+import { mockReturns } from "@/mocks/returns";
 import { paginate } from "@/mocks/utils";
 import { mockVehicles } from "@/mocks/vehicles";
 
@@ -32,7 +30,6 @@ function pricing(
   items: OrderItem[],
   couponCode: string | null = null,
   couponDiscountInPaise = 0,
-  installationFeeInPaise = 0,
 ): OrderPricing {
   const mrpTotalInPaise = items.reduce((sum, item) => sum + item.unitMrpInPaise * item.quantity, 0);
   const subtotalInPaise = items.reduce(
@@ -48,9 +45,7 @@ function pricing(
     couponCode,
     couponDiscountInPaise,
     deliveryFeeInPaise,
-    installationFeeInPaise,
-    totalInPaise:
-      subtotalInPaise - couponDiscountInPaise + installationFeeInPaise + deliveryFeeInPaise,
+    totalInPaise: subtotalInPaise - couponDiscountInPaise + deliveryFeeInPaise,
   };
 }
 
@@ -133,7 +128,59 @@ const cancelledItems: OrderItem[] = [
 ];
 
 // Demo data lives in memory: placed orders are kept until the server restarts.
+const recentlyDeliveredItems: OrderItem[] = [
+  {
+    id: "itm-1204-1",
+    productId: "prd-006",
+    slug: "ktm-front-brake-pads-duke-200-rc-200",
+    name: "KTM Genuine Front Brake Pad Set (Duke 200 / RC 200)",
+    brandName: "KTM",
+    imageUrl: photoOf("prd-006"),
+    quantity: 1,
+    unitPriceInPaise: 115000,
+    unitMrpInPaise: 125000,
+  },
+  {
+    id: "itm-1204-2",
+    productId: "prd-016",
+    slug: "motul-c2-chain-lube-road-150ml",
+    name: "Motul C2 Chain Lube Road (150 ml)",
+    brandName: "Motul",
+    imageUrl: photoOf("prd-016"),
+    quantity: 2,
+    unitPriceInPaise: 39900,
+    unitMrpInPaise: 45000,
+  },
+];
+
 const orders: Order[] = [
+  {
+    id: "ord-1204",
+    number: "KG-261011-1204",
+    status: "delivered",
+    placedAt: "2026-10-11T19:10:00+05:30",
+    history: [
+      { status: "placed", at: "2026-10-11T19:10:00+05:30" },
+      { status: "confirmed", at: "2026-10-11T19:14:00+05:30" },
+      { status: "processing", at: "2026-10-12T09:30:00+05:30" },
+      { status: "packed", at: "2026-10-12T14:05:00+05:30" },
+      { status: "shipped", at: "2026-10-12T18:40:00+05:30" },
+      { status: "out-for-delivery", at: "2026-10-13T08:20:00+05:30" },
+      { status: "delivered", at: "2026-10-13T12:55:00+05:30" },
+    ],
+    expectedDeliveryOn: "2026-10-13",
+    items: recentlyDeliveredItems,
+    deliveryAddress: homeAddress,
+    billingAddress: homeAddress,
+    vehicle: { id: "vehicle-ktm-duke-200", name: "KTM Duke 200" },
+    payment: { method: "upi", status: "paid", failureReason: null },
+    pricing: pricing(recentlyDeliveredItems),
+    gstin: null,
+    cancellationReason: null,
+    tracking: { courier: "Delhivery", trackingNumber: "DLV7781209941" },
+    returnableUntil: "2026-10-28",
+    returns: [],
+  },
   {
     id: "ord-1203",
     number: "KG-261008-1203",
@@ -147,13 +194,14 @@ const orders: Order[] = [
     items: confirmedItems,
     deliveryAddress: homeAddress,
     billingAddress: homeAddress,
-    bike: null,
-    payment: { method: "cod", status: "pending" },
-    pricing: pricing(confirmedItems, "KANNALI10", 20000),
+    vehicle: null,
+    payment: { method: "upi", status: "paid", failureReason: null },
+    pricing: pricing(confirmedItems),
     gstin: null,
     cancellationReason: null,
     tracking: null,
     returnableUntil: null,
+    returns: [],
   },
   {
     id: "ord-1187",
@@ -171,13 +219,14 @@ const orders: Order[] = [
     items: shippedItems,
     deliveryAddress: workAddress,
     billingAddress: homeAddress,
-    bike: { id: "bike-ktm-duke-200", name: "KTM Duke 200" },
-    payment: { method: "card", status: "paid" },
+    vehicle: { id: "vehicle-ktm-duke-200", name: "KTM Duke 200" },
+    payment: { method: "card", status: "paid", failureReason: null },
     pricing: pricing(shippedItems),
     gstin: null,
     cancellationReason: null,
     tracking: { courier: "Delhivery", trackingNumber: "DLV7781204563" },
     returnableUntil: null,
+    returns: [],
   },
   {
     id: "ord-1124",
@@ -197,13 +246,14 @@ const orders: Order[] = [
     items: deliveredItems,
     deliveryAddress: homeAddress,
     billingAddress: homeAddress,
-    bike: { id: "bike-ktm-duke-200", name: "KTM Duke 200" },
-    payment: { method: "upi", status: "paid" },
+    vehicle: { id: "vehicle-ktm-duke-200", name: "KTM Duke 200" },
+    payment: { method: "upi", status: "paid", failureReason: null },
     pricing: pricing(deliveredItems),
     gstin: null,
     cancellationReason: null,
     tracking: { courier: "Blue Dart", trackingNumber: "BD40551289371" },
     returnableUntil: "2026-10-12",
+    returns: [],
   },
   {
     id: "ord-1096",
@@ -219,31 +269,54 @@ const orders: Order[] = [
     items: cancelledItems,
     deliveryAddress: homeAddress,
     billingAddress: homeAddress,
-    bike: { id: "bike-ktm-duke-200", name: "KTM Duke 200" },
-    payment: { method: "upi", status: "refunded" },
+    vehicle: { id: "vehicle-ktm-duke-200", name: "KTM Duke 200" },
+    payment: { method: "upi", status: "refunded", failureReason: null },
     pricing: pricing(cancelledItems),
     gstin: null,
     cancellationReason: "Ordered by mistake: the bulb doesn't fit my KTM Duke 200",
     tracking: null,
     returnableUntil: null,
+    returns: [],
   },
 ];
 
 const groupStatuses: Record<Exclude<OrderGroup, "all">, OrderStatus[]> = {
-  active: ["placed", "confirmed", "processing", "packed", "shipped", "out-for-delivery"],
+  active: [
+    "payment-pending",
+    "placed",
+    "confirmed",
+    "processing",
+    "packed",
+    "shipped",
+    "out-for-delivery",
+  ],
   delivered: ["delivered"],
-  cancelled: ["cancelled", "return-requested", "returned"],
+  cancelled: ["cancelled"],
 };
+
+// Returns live with the returns demo data; each order shows a summary of its own.
+async function withReturns(order: Order): Promise<Order> {
+  return { ...order, returns: await mockReturns.getReturnSummaries(order.id) };
+}
 
 export const mockOrders = {
   async getOrders({ group = "all", page, pageSize }: OrderQuery = {}): Promise<Paginated<Order>> {
+    const all = await Promise.all(orders.map(withReturns));
+    // "Cancelled & returns" also lists delivered orders that have a return.
     const matching =
-      group === "all" ? orders : orders.filter((o) => groupStatuses[group].includes(o.status));
+      group === "all"
+        ? all
+        : all.filter(
+            (o) =>
+              groupStatuses[group].includes(o.status) ||
+              (group === "cancelled" && o.returns.length > 0),
+          );
     return paginate(matching, page, pageSize);
   },
 
   async getOrder(id: string): Promise<Order | null> {
-    return orders.find((order) => order.id === id) ?? null;
+    const order = orders.find((o) => o.id === id);
+    return order ? withReturns(order) : null;
   },
 
   // Demo data lives in memory, so cancellations and returns last until the server restarts.
@@ -256,15 +329,6 @@ export const mockOrders = {
     order.history.push({ status: "cancelled", at });
     order.expectedDeliveryOn = null;
     if (order.payment.status === "paid") order.payment.status = "refunded";
-    return order;
-  },
-
-  async requestReturn(id: string, reason: string): Promise<Order | null> {
-    const order = orders.find((o) => o.id === id);
-    if (!order) return null;
-    order.status = "return-requested";
-    order.cancellationReason = reason;
-    order.history.push({ status: "return-requested", at: new Date().toISOString() });
     return order;
   },
 
@@ -285,7 +349,7 @@ export const mockOrders = {
         slug: product.slug,
         name: product.name,
         brandName: product.brand.name,
-        imageUrl: product.image?.url ?? null,
+        imageUrl: product.images[0]?.url ?? null,
         quantity: line.quantity,
         unitPriceInPaise: product.priceInPaise,
         unitMrpInPaise: product.mrpInPaise,
@@ -297,39 +361,59 @@ export const mockOrders = {
       ? await mockPromotions.checkCoupon(input.couponCode)
       : null;
     const coupon = couponCheck?.valid ? couponCheck.coupon : null;
-    const installations = input.lines.filter((line) => line.withInstallation).length;
     const location = await mockLocation.lookupPin(input.deliveryAddress.pin);
-    const bike = input.bikeId ? await mockVehicles.getMyBike(input.bikeId) : null;
+    const vehicle = input.vehicleId ? await mockVehicles.getMyVehicle(input.vehicleId) : null;
 
-    const serial = 1204 + orders.length - 4;
+    const serial = Math.max(...orders.map((o) => Number(o.id.replace("ord-", "")))) + 1;
+    const isCashOnDelivery = input.paymentMode === "cod";
+    // An online order is only placed once its payment goes through (see markPaid).
+    const status = isCashOnDelivery ? "placed" : "payment-pending";
     const order: Order = {
       id: `ord-${serial}`,
       number: `KG-${toIndianIsoDate(now).slice(2).replaceAll("-", "")}-${serial}`,
-      status: "placed",
+      status,
       placedAt: now.toISOString(),
-      history: [{ status: "placed", at: now.toISOString() }],
+      history: [{ status, at: now.toISOString() }],
       expectedDeliveryOn: toIndianIsoDate(getDeliveryDate(now, location?.deliveryDays ?? 5)),
       items,
       deliveryAddress: input.deliveryAddress,
       billingAddress: input.billingAddress,
-      bike: bike ? { id: bike.id, name: getBikeName(bike) } : null,
+      vehicle: vehicle ? { id: vehicle.id, name: getVehicleName(vehicle) } : null,
       payment: {
-        method: input.paymentMethod,
-        // Demo: online payments succeed straight away; cash is collected on delivery.
-        status: input.paymentMethod === "cod" ? "pending" : "paid",
+        method: isCashOnDelivery ? "cod" : null,
+        status: "pending",
+        failureReason: null,
       },
       pricing: pricing(
         items,
         coupon?.code ?? null,
         coupon ? getCouponDiscount(coupon, subtotal) : 0,
-        installations * INSTALLATION_FEE_IN_PAISE,
       ),
       gstin: input.gstin,
       cancellationReason: null,
       tracking: null,
       returnableUntil: null,
+      returns: [],
     };
     orders.unshift(order);
+    return order;
+  },
+
+  async markPaid(id: string, method: PaymentMethod): Promise<Order | null> {
+    const order = orders.find((o) => o.id === id);
+    if (!order) return null;
+    if (order.status === "payment-pending") {
+      order.status = "placed";
+      order.history.push({ status: "placed", at: new Date().toISOString() });
+    }
+    order.payment = { method, status: "paid", failureReason: null };
+    return order;
+  },
+
+  async markPaymentFailed(id: string, reason: string): Promise<Order | null> {
+    const order = orders.find((o) => o.id === id);
+    if (!order || order.payment.status === "paid") return order ?? null;
+    order.payment = { ...order.payment, status: "failed", failureReason: reason };
     return order;
   },
 };

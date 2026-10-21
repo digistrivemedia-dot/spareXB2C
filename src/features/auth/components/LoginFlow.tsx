@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 
 import { MobileStep } from "@/features/auth/components/MobileStep";
@@ -43,16 +42,9 @@ export function LoginFlow({ next }: { next: string | null }) {
       )}
 
       <p className="rounded-lg bg-info-50 px-3 py-2 text-sm text-info-700">
-        Demo: any 10-digit mobile number and any 6-digit code will work. Use 98450 12345 to see
-        Arjun&apos;s account.
+        Demo: any 10-digit mobile number and any 6-digit code will work (000000 shows the wrong-code
+        message). Use 98450 12345 to see Arjun&apos;s account.
       </p>
-
-      <Link
-        href="/login/email"
-        className="justify-self-center text-sm font-semibold text-navy-700 hover:underline"
-      >
-        Use email and password instead
-      </Link>
     </div>
   );
 }

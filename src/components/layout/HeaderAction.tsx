@@ -21,7 +21,7 @@ type HeaderActionProps = React.ComponentProps<"button"> &
     asChild?: boolean;
   };
 
-/** A white-on-navy control for the header (location, bike, cart, account). Renders a link with `asChild`. */
+/** A white-on-navy control for the header (location, vehicle, cart, account). Renders a link with `asChild`. */
 export function HeaderAction({ asChild = false, variant, className, ...props }: HeaderActionProps) {
   const Comp = asChild ? Slot.Root : "button";
   return <Comp className={cn(headerActionVariants({ variant }), className)} {...props} />;

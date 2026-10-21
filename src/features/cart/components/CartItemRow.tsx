@@ -11,12 +11,11 @@ import type { CartItem } from "@/features/cart/types";
 import { ProductFitBadge } from "@/features/catalog/components/ProductFitBadge";
 import { ProductImage } from "@/features/catalog/components/ProductImage";
 import { useWishlistStore } from "@/features/wishlist/store";
-import { INSTALLATION_FEE_IN_PAISE, MAX_QUANTITY_PER_ITEM } from "@/lib/constants";
+import { MAX_QUANTITY_PER_ITEM } from "@/lib/constants";
 import { formatPrice } from "@/lib/format";
 
 export function CartItemRow({ item }: { item: CartItem }) {
   const setQuantity = useCartStore((state) => state.setQuantity);
-  const setInstallation = useCartStore((state) => state.setInstallation);
   const removeItem = useCartStore((state) => state.removeItem);
   const addToWishlist = useWishlistStore((state) => state.add);
   const href = `/products/${item.slug}`;
@@ -61,18 +60,6 @@ export function CartItemRow({ item }: { item: CartItem }) {
 
         <Price priceInPaise={item.priceInPaise} mrpInPaise={item.mrpInPaise} />
         <ProductFitBadge fitment={item.fitment} />
-
-        {item.withInstallation && (
-          <p className="flex flex-wrap items-center gap-x-2 text-sm text-gray-700">
-            + Installation at Kannali Garage{" "}
-            <span className="font-semibold tabular-nums">
-              {formatPrice(INSTALLATION_FEE_IN_PAISE)}
-            </span>
-            <Button variant="link" size="sm" onClick={() => setInstallation(item.productId, false)}>
-              Remove installation
-            </Button>
-          </p>
-        )}
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
           <QuantityStepper

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/Card";
 import { OrderPriceSummary } from "@/features/orders/components/OrderPriceSummary";
 import type { Order } from "@/features/orders/types";
-import { paymentMethodLabel } from "@/features/orders/utils";
+import { getPaymentLabel } from "@/features/orders/utils";
 import { formatDate, formatPrice } from "@/lib/format";
 
 /** What the customer sees right after placing an order. */
@@ -47,18 +47,12 @@ export function OrderConfirmation({ order }: { order: Order }) {
         <p className="flex gap-3">
           <CreditCard className="size-5 shrink-0 text-navy-700" aria-hidden />
           <span>
-            {paymentMethodLabel[order.payment.method]}
+            {getPaymentLabel(order.payment)}
             {isCashOnDelivery
               ? ` · Pay ${formatPrice(order.pricing.totalInPaise)} when it arrives`
               : " · Paid"}
           </span>
         </p>
-        {order.pricing.installationFeeInPaise > 0 && (
-          <p className="rounded-lg bg-info-50 p-3 text-info-700">
-            We&apos;ll call you to book a slot for installation at Kannali Garage once your parts
-            arrive.
-          </p>
-        )}
       </Card>
 
       <Card aria-label="Order summary" className="grid gap-4">

@@ -1,12 +1,19 @@
 import { BadgeCheck, LockKeyhole, ReceiptText, RotateCcw, ShieldCheck } from "lucide-react";
 
 import { Container } from "@/components/layout/Container";
+import { features } from "@/lib/config";
 
 const promises = [
   { icon: BadgeCheck, title: "Genuine brands", text: "Original parts from makers you trust" },
-  { icon: ShieldCheck, title: "Fit checked for your bike", text: "Every part shows if it fits" },
+  { icon: ShieldCheck, title: "Fit checked for your vehicle", text: "Every part shows if it fits" },
   { icon: RotateCcw, title: "Easy returns", text: "Simple returns on unused parts" },
-  { icon: LockKeyhole, title: "Secure payments", text: "UPI, cards and cash on delivery" },
+  {
+    icon: LockKeyhole,
+    title: "Secure payments",
+    text: features.cashOnDelivery
+      ? "UPI, cards and cash on delivery"
+      : "UPI, cards and net banking",
+  },
   { icon: ReceiptText, title: "GST invoice", text: "With every order" },
 ];
 

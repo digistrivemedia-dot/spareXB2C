@@ -10,7 +10,7 @@ const inputProps = {
   name: "q",
   type: "search",
   enterKeyHint: "search",
-  placeholder: "Search parts, brands or part number",
+  placeholder: "Search parts",
   className: "pl-10",
 } as const;
 

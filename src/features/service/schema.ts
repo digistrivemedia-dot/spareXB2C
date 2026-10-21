@@ -8,11 +8,9 @@ export const visitReviewSchema = z.object({
 export type VisitReviewValues = z.infer<typeof visitReviewSchema>;
 
 export const bookingSchema = z.object({
-  bikeId: z.string().min(1, "Choose the bike to service."),
+  vehicleId: z.string().min(1, "Choose the vehicle to service."),
   serviceTypeId: z.string().min(1, "Choose a service."),
   garageId: z.string().min(1, "Choose a garage."),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a date."),
-  time: z.string().regex(/^\d{2}:\d{2}$/, "Choose a time."),
-  pickupAddressId: z.string().nullable(),
   notes: z.string().trim().max(300, "Please keep notes under 300 characters."),
 });
