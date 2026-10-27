@@ -9,7 +9,18 @@ import { WishlistButton } from "@/features/wishlist/components/WishlistButton";
 
 const LOW_STOCK_THRESHOLD = 5;
 
-export function ProductCard({ product }: { product: ProductSummary }) {
+type ProductCardProps = {
+  product: ProductSummary;
+  /**
+   * "compact" drops the fit badge (for rows already filtered to the vehicle) and uses a small cart button.
+   */
+  variant?: "default" | "compact";
+  /** A short label above the name, e.g. "Due at next service". */
+  tag?: string;
+};
+
+export function ProductCard({ product, variant = "default", tag }: ProductCardProps) {
+  const isCompact = variant === "compact";
   const href = `/products/${product.slug}`;
   const { stockQuantity } = product;
 
@@ -28,6 +39,11 @@ export function ProductCard({ product }: { product: ProductSummary }) {
       </Link>
 
       <div className="flex flex-1 flex-col gap-1.5">
+        {tag && (
+          <span className="w-fit rounded-full bg-navy-50 px-2 py-0.5 text-xs font-semibold text-navy-800">
+            {tag}
+          </span>
+        )}
         <p className="text-xs font-semibold tracking-wide text-gray-500 uppercase">
           {product.brand.name}
           {product.isGenuine && <span className="text-navy-700"> · Genuine</span>}
@@ -37,14 +53,23 @@ export function ProductCard({ product }: { product: ProductSummary }) {
             {product.name}
           </Link>
         </h3>
-        <Price priceInPaise={product.priceInPaise} mrpInPaise={product.mrpInPaise} />
-        <ProductFitBadge fitment={product.fitment} />
+        {isCompact ? (
+          <div className="mt-auto flex items-end justify-between gap-2">
+            <Price priceInPaise={product.priceInPaise} mrpInPaise={product.mrpInPaise} />
+            <AddToCartButton product={product} size="icon" className="shrink-0" />
+          </div>
+        ) : (
+          <>
+            <Price priceInPaise={product.priceInPaise} mrpInPaise={product.mrpInPaise} />
+            <ProductFitBadge fitment={product.fitment} />
+          </>
+        )}
         {stockQuantity > 0 && stockQuantity <= LOW_STOCK_THRESHOLD && (
           <p className="text-xs font-semibold text-warning-700">Only {stockQuantity} left</p>
         )}
       </div>
 
-      <AddToCartButton product={product} className="mt-1 w-full" />
+      {!isCompact && <AddToCartButton product={product} className="mt-1 w-full" />}
     </article>
   );
 }

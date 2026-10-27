@@ -18,10 +18,12 @@ import { formatPrice } from "@/lib/format";
 type ServicePaymentOptionsProps = {
   jobId: string;
   bill: ServiceBill;
+  /** With pick and drop, "at the garage" means paying the garage's staff at drop-off. */
+  isPickupDrop: boolean;
 };
 
 /** Pay the garage's bill online now, or say you'll pay at the counter when you collect. */
-export function ServicePaymentOptions({ jobId, bill }: ServicePaymentOptionsProps) {
+export function ServicePaymentOptions({ jobId, bill, isPickupDrop }: ServicePaymentOptionsProps) {
   const router = useRouter();
   const { pay, paymentWindow } = usePaymentWindow();
   const [isBusy, setIsBusy] = useState(false);
@@ -41,7 +43,9 @@ export function ServicePaymentOptions({ jobId, bill }: ServicePaymentOptionsProp
       const confirmed = await confirmServicePaymentAction(jobId, result.proof);
       if (confirmed.ok) {
         toast.success("Paid. Thank you!", {
-          description: "Show this to the garage when you collect.",
+          description: isPickupDrop
+            ? "The garage will drop your vehicle off as planned."
+            : "Show this to the garage when you collect.",
         });
         router.push(`/account/services/${jobId}`);
         return;
@@ -56,8 +60,13 @@ export function ServicePaymentOptions({ jobId, bill }: ServicePaymentOptionsProp
   function payAtGarage() {
     startChoosing(async () => {
       const result = await payAtGarageAction(jobId);
-      if (result.ok) toast.success("Noted. Pay at the counter when you collect.");
-      else toast.error(result.message);
+      if (result.ok) {
+        toast.success(
+          isPickupDrop
+            ? "Noted. Pay the garage's staff when they drop it off."
+            : "Noted. Pay at the counter when you collect.",
+        );
+      } else toast.error(result.message);
     });
   }
 
@@ -70,12 +79,12 @@ export function ServicePaymentOptions({ jobId, bill }: ServicePaymentOptionsProp
       {willPayAtGarage ? (
         <p className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 text-sm text-gray-700">
           <Store className="size-4 shrink-0 text-navy-700" aria-hidden />
-          You chose to pay at the garage.
+          {isPickupDrop ? "You chose to pay at drop-off." : "You chose to pay at the garage."}
         </p>
       ) : (
         <Button size="lg" variant="secondary" onClick={payAtGarage} disabled={isChoosing}>
           <Store aria-hidden />
-          I&apos;ll pay at the garage
+          {isPickupDrop ? "I'll pay at drop-off" : "I'll pay at the garage"}
         </Button>
       )}
       {paymentWindow}

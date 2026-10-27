@@ -60,7 +60,11 @@ export default async function ServicePaymentPage({
             </span>
           </p>
         ) : (
-          <ServicePaymentOptions jobId={job.id} bill={bill} />
+          <ServicePaymentOptions
+            jobId={job.id}
+            bill={bill}
+            isPickupDrop={job.pickupDrop !== null}
+          />
         )}
       </Card>
 

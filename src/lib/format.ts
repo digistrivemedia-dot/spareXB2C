@@ -89,3 +89,13 @@ export function formatRegistration(registration: string): string {
 export function formatKm(km: number): string {
   return `${numberFormat.format(km)} km`;
 }
+
+/** "Arjun Rao" → "AR", for avatars. */
+export function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}

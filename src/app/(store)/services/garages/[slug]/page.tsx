@@ -11,6 +11,7 @@ import { Rating } from "@/components/ui/Rating";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { getDefaultLocation } from "@/features/location/default-location";
 import { getGarage, getGarageReviews, getServiceTypes } from "@/features/service/api";
+import { FavouriteGarageButton } from "@/features/service/components/FavouriteGarageButton";
 import { GarageInfoCard } from "@/features/service/components/GarageInfoCard";
 import { GarageReviewsCard } from "@/features/service/components/GarageReviewsCard";
 import { GarageServicesCard } from "@/features/service/components/GarageServicesCard";
@@ -50,9 +51,16 @@ export default async function GaragePage({ params }: PageProps<"/services/garage
           </div>
           <Rating average={garage.rating} count={garage.reviewCount} />
         </div>
-        <Button asChild size="lg">
-          <Link href={`/services/book?garage=${garage.slug}`}>Book a service here</Link>
-        </Button>
+        <div className="flex items-center gap-3">
+          <FavouriteGarageButton
+            garageId={garage.id}
+            garageName={garage.name}
+            className="border border-gray-200"
+          />
+          <Button asChild size="lg">
+            <Link href={`/services/book?garage=${garage.slug}`}>Book a service here</Link>
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3 lg:items-start">

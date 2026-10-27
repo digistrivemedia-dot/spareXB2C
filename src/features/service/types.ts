@@ -1,3 +1,4 @@
+import type { Address } from "@/features/account/types";
 import type { VehicleType } from "@/features/vehicles/types";
 import type { Photo } from "@/lib/types";
 
@@ -60,10 +61,14 @@ export type GarageReviews = {
 
 /** What the garage list can be narrowed and sorted by. */
 export type GarageQuery = {
+  /** Only these garages, e.g. the customer's favourites. */
+  ids?: string[];
   /** Distances are measured from this PIN; without one, garages are sorted by rating. */
   pin?: string;
   serviceTypeId?: string;
   vehicleType?: VehicleType;
+  /** Only garages open on this day ("YYYY-MM-DD"). */
+  openOn?: string;
   minRating?: number;
   openOnSunday?: boolean;
   sort?: "distance" | "rating";
@@ -79,15 +84,19 @@ export type NextServiceDue = {
   status: ReminderStatus;
 };
 
-/** The five stages a customer sees, in order. */
+/** The stages a customer sees, in order. "picked-up" and "out-for-drop" only happen with pick and drop. */
 export type ServiceStage =
   /** Sent to the garage, which accepts or declines it. */
   | "requested"
   | "booked"
+  /** The garage's staff collected the vehicle and are taking it to the garage. */
+  | "picked-up"
   | "inspected"
   | "awaiting-approval"
   | "in-service"
   | "ready"
+  /** The garage's staff are bringing the vehicle back. */
+  | "out-for-drop"
   | "delivered"
   | "declined"
   | "cancelled";
@@ -163,6 +172,22 @@ export type ServiceBill = {
   };
 };
 
+/** Where the garage collects or returns the vehicle: a copy of the saved address at booking time. */
+export type JobAddress = Pick<
+  Address,
+  "label" | "name" | "mobile" | "line1" | "area" | "city" | "pin"
+>;
+
+/** Free pick and drop: the garage's own staff collect the vehicle on the booked day and bring it back. */
+export type PickupDrop = {
+  /** Pickup window on the booked day, 24-hour "HH:mm", India Standard Time. */
+  window: { from: string; to: string };
+  pickupAddress: JobAddress;
+  dropAddress: JobAddress;
+  /** The garage owner, technician or helper doing the pickup; null until the garage assigns someone. */
+  staff: { name: string; phone: string } | null;
+};
+
 export type ServiceJob = {
   id: string;
   jobCardNumber: string;
@@ -175,6 +200,8 @@ export type ServiceJob = {
   scheduledOn: string;
   /** What the customer wrote when booking. */
   notes: string;
+  /** Null when the customer brings the vehicle in themselves. */
+  pickupDrop: PickupDrop | null;
   /** Why the garage declined, or why the customer cancelled. */
   closedReason: string | null;
   checkIn: CheckIn | null;
@@ -214,12 +241,62 @@ export type ServiceType = {
 /** A garage in a list, with its distance from the customer's PIN (null without a PIN). */
 export type GarageOption = Garage & { distanceKm: number | null };
 
-/** Nothing is paid when booking; the garage accepts or declines the request. */
+/**
+ * A service package the admin sets for particular vehicle models, at one price at every garage.
+ * Parts or work beyond the package come as an estimate for the customer's approval.
+ */
+export type ServicePackage = {
+  id: string;
+  name: string;
+  description: string;
+  priceInPaise: number;
+  /** How long the vehicle stays at the garage, e.g. "3–4 hours". */
+  duration: string;
+  includes: string[];
+  /** Catalog model ids (e.g. "ktm-duke-200") the package is for. */
+  modelIds: string[];
+  /** The regular service at the maker's interval: what the home page suggests when the next service is due. */
+  isRoutine: boolean;
+};
+
+/**
+ * How the garage is picked: "best" lets Kannali assign the best garage that's free, by its own criteria;
+ * "chosen" is a garage the customer picked (a favourite or from the list).
+ */
+export type GarageChoice = { mode: "best" } | { mode: "chosen"; garageId: string };
+
+/** Nothing is paid when booking. The request goes to garages one by one until one accepts. */
 export type BookServiceInput = {
   vehicleId: string;
-  serviceTypeId: string;
-  garageId: string;
-  /** "YYYY-MM-DD", a day the garage is open. */
+  /** Null when the customer describes a problem instead; the garage quotes after inspecting. */
+  packageId: string | null;
+  garage: GarageChoice;
+  /** "YYYY-MM-DD". */
   date: string;
+  /** Required when there is no package: what's wrong with the vehicle. */
   notes: string;
+  /** Null when the customer brings the vehicle in. Addresses are ids from the customer's address book. */
+  pickupDrop: {
+    /** "09:00-12:00", one of the pickup windows. */
+    windowId: string;
+    pickupAddressId: string;
+    dropAddressId: string;
+  } | null;
+};
+
+/**
+ * A booking on its way to a garage, like a ride request: each garage in turn gets a few seconds to accept
+ * (`GARAGE_ACCEPT_SECONDS`), then it moves on to the next. The job exists once a garage accepts.
+ */
+export type ServiceRequest = {
+  id: string;
+  status: "searching" | "accepted" | "no-garage" | "cancelled";
+  /** Which garage is being asked now (1-based), out of how many. */
+  attempt: number;
+  totalGarages: number;
+  /** The garage being asked, or the one that accepted. Null when none is left. */
+  garage: Pick<Garage, "id" | "name"> | null;
+  /** When the current garage's time to accept runs out (ISO), while searching. */
+  expiresAt: string | null;
+  job: ServiceJob | null;
 };

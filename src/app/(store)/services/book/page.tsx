@@ -3,19 +3,21 @@ import { redirect } from "next/navigation";
 
 import { Container } from "@/components/layout/Container";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { getAddresses } from "@/features/account/api";
 import { getSession } from "@/features/auth/session";
 import { getDefaultLocation } from "@/features/location/default-location";
-import { getGarage, getServiceTypes } from "@/features/service/api";
+import { getGarage, getServicePackages } from "@/features/service/api";
 import { BookingWizard } from "@/features/service/components/BookingWizard";
 import { getMyVehicles } from "@/features/vehicles/api";
 import { getSearchParam } from "@/lib/search-params";
 
 export const metadata: Metadata = {
   title: "Book a service",
-  description: "Choose a garage near you and a day. Nothing to pay when you book.",
+  description:
+    "Pick a package for your vehicle, a day and free pick and drop. Nothing to pay when you book.",
 };
 
-/** Links can fill in steps: `vehicle` (a saved vehicle id), `service` (a service id), `garage` (a slug). */
+/** Links can fill in steps: `vehicle` (a saved vehicle id), `package` (one of its packages) and `garage` (a slug). */
 export default async function BookServicePage({ searchParams }: PageProps<"/services/book">) {
   const params = await searchParams;
   // Bookings belong to the customer's vehicles, so guests log in first.
@@ -23,13 +25,18 @@ export default async function BookServicePage({ searchParams }: PageProps<"/serv
 
   const location = await getDefaultLocation();
   const garageSlug = getSearchParam(params, "garage");
-  const [vehicles, serviceTypes, garage] = await Promise.all([
+  const [vehicles, addresses, garage] = await Promise.all([
     getMyVehicles(),
-    getServiceTypes(),
+    getAddresses(),
     garageSlug ? getGarage(garageSlug, location?.pin) : null,
   ]);
+  const packagesByVehicle = Object.fromEntries(
+    await Promise.all(
+      vehicles.map(async (v) => [v.id, await getServicePackages(v.modelId)] as const),
+    ),
+  );
   const vehicleId = getSearchParam(params, "vehicle");
-  const serviceTypeId = getSearchParam(params, "service");
+  const packageId = getSearchParam(params, "package");
 
   return (
     <Container className="grid max-w-3xl grid-cols-1 gap-6 py-6 lg:py-8">
@@ -39,12 +46,14 @@ export default async function BookServicePage({ searchParams }: PageProps<"/serv
       />
       <BookingWizard
         vehicles={vehicles}
-        serviceTypes={serviceTypes}
+        packagesByVehicle={packagesByVehicle}
+        addresses={addresses}
         pin={location?.pin ?? null}
         initial={{
           vehicleId: vehicles.some((v) => v.id === vehicleId) ? vehicleId : undefined,
-          serviceTypeId: serviceTypes.some((t) => t.id === serviceTypeId)
-            ? serviceTypeId
+          // Only a package for that vehicle, e.g. "Book this service" on the home page.
+          packageId: packagesByVehicle[vehicleId ?? ""]?.some((p) => p.id === packageId)
+            ? packageId
             : undefined,
           garage: garage ?? undefined,
         }}

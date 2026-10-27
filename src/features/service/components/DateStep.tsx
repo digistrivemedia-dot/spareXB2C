@@ -7,14 +7,15 @@ import { DateOptions } from "@/features/service/components/DateOptions";
 import { useData } from "@/lib/use-data";
 
 type DateStepProps = {
-  garageId: string;
+  /** Null when Kannali assigns the garage: any day some garage is open. */
+  garageId: string | null;
   selected: string;
   onSelect: (date: string) => void;
 };
 
-/** Loads the days this garage takes bookings, and lets the customer pick one. */
+/** Loads the days open for booking, and lets the customer pick one. */
 export function DateStep({ garageId, selected, onSelect }: DateStepProps) {
-  const dates = useData(garageId, () => listBookableDatesAction(garageId));
+  const dates = useData(garageId ?? "any-garage", () => listBookableDatesAction(garageId));
 
   if (dates.status === "error") return <ErrorState onRetry={dates.retry} titleAs="h3" />;
   if (dates.status !== "success") {

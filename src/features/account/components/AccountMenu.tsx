@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { logoutAction } from "@/features/auth/actions";
 import type { User } from "@/features/auth/types";
-import { formatMobile } from "@/lib/format";
+import { formatMobile, getInitials } from "@/lib/format";
 import { accountNav } from "@/lib/navigation";
 
 type AccountMenuProps = {
@@ -24,12 +24,7 @@ type AccountMenuProps = {
 
 export function AccountMenu({ user }: AccountMenuProps) {
   const firstName = user.name.split(" ")[0];
-  const initials = user.name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+  const initials = getInitials(user.name);
 
   return (
     <DropdownMenu>

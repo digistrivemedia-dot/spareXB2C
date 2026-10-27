@@ -8,88 +8,123 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/Card";
 import { OptionTile } from "@/components/ui/OptionTile";
 import { StepProgress } from "@/components/ui/StepProgress";
-import { bookServiceAction } from "@/features/service/actions";
+import type { Address } from "@/features/account/types";
+import { requestServiceAction } from "@/features/service/actions";
 import { BookingConfirmed } from "@/features/service/components/BookingConfirmed";
 import { BookingReview } from "@/features/service/components/BookingReview";
 import { DateStep } from "@/features/service/components/DateStep";
-import { GarageStep } from "@/features/service/components/GarageStep";
-import { ServiceTypeOptions } from "@/features/service/components/ServiceTypeOptions";
-import type { GarageOption, ServiceJob, ServiceType } from "@/features/service/types";
+import { FindingGarage } from "@/features/service/components/FindingGarage";
+import { GarageStep, type GarageStepValue } from "@/features/service/components/GarageStep";
+import { PackageStep } from "@/features/service/components/PackageStep";
+import {
+  emptyPickupDropDraft,
+  PickupDropStep,
+  toPickupDropInput,
+} from "@/features/service/components/PickupDropStep";
+import type {
+  BookServiceInput,
+  GarageOption,
+  ServiceJob,
+  ServicePackage,
+  ServiceRequest,
+} from "@/features/service/types";
 import type { MyVehicle } from "@/features/vehicles/types";
 import { formatPlate, getVehicleName } from "@/features/vehicles/utils";
 
 type BookingWizardProps = {
   vehicles: MyVehicle[];
-  serviceTypes: ServiceType[];
+  /** The admin's packages for each of the customer's vehicles, by vehicle id. */
+  packagesByVehicle: Record<string, ServicePackage[]>;
+  /** Saved addresses, for pick and drop. */
+  addresses: Address[];
   /** Garages are listed nearest to this PIN. */
   pin: string | null;
   /** Choices made before arriving, e.g. "Book here" on a garage's page. */
-  initial: { vehicleId?: string; serviceTypeId?: string; garage?: GarageOption };
+  initial: { vehicleId?: string; packageId?: string; garage?: GarageOption };
 };
 
-const titles = ["Vehicle", "Service", "Garage", "Day", "Review"];
+const titles = ["Vehicle", "Package", "Garage", "Day", "Pick and drop", "Review"];
 
-/** Whether a garage picked beforehand can be kept: it does this service for this vehicle. */
-function garageFits(
-  garage: GarageOption | null,
-  vehicle: MyVehicle | undefined,
-  serviceTypeId: string,
-): boolean {
-  return Boolean(
-    garage &&
-    vehicle &&
-    garage.vehicleTypes.includes(vehicle.type) &&
-    garage.services.some((s) => s.serviceTypeId === serviceTypeId),
-  );
+/** A garage picked beforehand is kept only if it works on this vehicle. */
+function keepsGarage(garage: GarageStepValue | null, vehicle: MyVehicle | undefined) {
+  if (garage === "best") return true;
+  return Boolean(garage && vehicle && garage.vehicleTypes.includes(vehicle.type));
 }
 
-/** The first step that still needs an answer (1-based). */
-function stepAfter(vehicleId: string, serviceTypeId: string, keepsGarage: boolean): number {
-  if (!vehicleId) return 1;
-  if (!serviceTypeId) return 2;
-  return keepsGarage ? 4 : 3;
-}
-
-/** Vehicle → service → garage → day → review → sent. Steps chosen beforehand are skipped. */
-export function BookingWizard({ vehicles, serviceTypes, pin, initial }: BookingWizardProps) {
+/**
+ * Vehicle → package → garage → day → pick and drop → review, then the request goes out to garages until one
+ * accepts (FindingGarage), then the confirmation. Steps answered beforehand are skipped.
+ */
+export function BookingWizard({
+  vehicles,
+  packagesByVehicle,
+  addresses,
+  pin,
+  initial,
+}: BookingWizardProps) {
   const [vehicleId, setVehicleId] = useState(initial.vehicleId ?? "");
-  const [serviceTypeId, setServiceTypeId] = useState(initial.serviceTypeId ?? "");
-  const [garage, setGarage] = useState<GarageOption | null>(initial.garage ?? null);
-  const [step, setStep] = useState(() =>
-    stepAfter(
-      vehicleId,
-      serviceTypeId,
-      garageFits(
-        garage,
-        vehicles.find((v) => v.id === vehicleId),
-        serviceTypeId,
-      ),
-    ),
-  );
+  // A package id, null for "tell us the problem", undefined until chosen.
+  const [packageId, setPackageId] = useState<string | null | undefined>(initial.packageId);
+  const [garage, setGarage] = useState<GarageStepValue | null>(initial.garage ?? null);
+  const [step, setStep] = useState(() => {
+    if (!vehicleId) return 1;
+    if (!packageId) return 2;
+    return keepsGarage(
+      garage,
+      vehicles.find((v) => v.id === vehicleId),
+    )
+      ? 4
+      : 3;
+  });
   const [date, setDate] = useState("");
+  const [pickupDraft, setPickupDraft] = useState(() => emptyPickupDropDraft(addresses));
   const [notes, setNotes] = useState("");
+  const [request, setRequest] = useState<ServiceRequest | null>(null);
   const [booked, setBooked] = useState<ServiceJob | null>(null);
-  const [isBooking, startTransition] = useTransition();
+  const [isSending, startTransition] = useTransition();
 
   const vehicle = vehicles.find((v) => v.id === vehicleId);
-  const serviceType = serviceTypes.find((t) => t.id === serviceTypeId);
+  const packages = packagesByVehicle[vehicleId] ?? [];
+  const servicePackage = packages.find((p) => p.id === packageId) ?? null;
+  const chosenGarage = garage === "best" ? null : garage;
+  const pickupDrop = toPickupDropInput(pickupDraft);
+  const canSend = pickupDrop !== undefined && (packageId !== null || notes.trim().length > 0);
 
-  function confirm() {
-    if (!garage) return;
+  // After the package, skip the garage step when one was picked beforehand.
+  const afterPackage = () => setStep(keepsGarage(garage, vehicle) ? 4 : 3);
+
+  function send() {
+    if (!garage || pickupDrop === undefined || packageId === undefined) return;
+    const input: BookServiceInput = {
+      vehicleId,
+      packageId,
+      garage: garage === "best" ? { mode: "best" } : { mode: "chosen", garageId: garage.id },
+      date,
+      notes,
+      pickupDrop,
+    };
     startTransition(async () => {
-      const result = await bookServiceAction({
-        vehicleId,
-        serviceTypeId,
-        garageId: garage.id,
-        date,
-        notes,
-      });
-      if (result.ok) setBooked(result.job);
+      const result = await requestServiceAction(input);
+      if (result.ok) setRequest(result.request);
       else toast.error(result.message);
     });
   }
 
   if (booked) return <BookingConfirmed job={booked} />;
+  if (request) {
+    return (
+      <FindingGarage
+        key={request.id}
+        request={request}
+        onAccepted={setBooked}
+        onBack={() => setRequest(null)}
+        onRetry={() => {
+          setRequest(null);
+          send();
+        }}
+      />
+    );
+  }
 
   return (
     <Card aria-label="Book a service" className="grid gap-6">
@@ -102,8 +137,10 @@ export function BookingWizard({ vehicles, serviceTypes, pin, initial }: BookingW
               key={v.id}
               isSelected={v.id === vehicleId}
               onClick={() => {
+                // Packages are per model, so a different vehicle starts the package again.
+                if (v.id !== vehicleId) setPackageId(undefined);
                 setVehicleId(v.id);
-                setStep(stepAfter(v.id, serviceTypeId, garageFits(garage, v, serviceTypeId)));
+                setStep(2);
               }}
             >
               <span className="font-semibold text-gray-900">{getVehicleName(v)}</span>
@@ -115,34 +152,39 @@ export function BookingWizard({ vehicles, serviceTypes, pin, initial }: BookingW
         </div>
       )}
 
-      {step === 2 && (
-        <ServiceTypeOptions
-          types={serviceTypes}
-          selectedId={serviceTypeId}
+      {step === 2 && vehicle && (
+        <PackageStep
+          vehicleName={getVehicleName(vehicle)}
+          packages={packages}
+          selected={packageId}
           onSelect={(id) => {
-            setServiceTypeId(id);
-            setStep(stepAfter(vehicleId, id, garageFits(garage, vehicle, id)));
+            setPackageId(id);
+            if (id !== null) afterPackage();
           }}
+          problem={notes}
+          onProblemChange={setNotes}
+          onContinue={afterPackage}
         />
       )}
 
       {step === 3 && vehicle && (
         <GarageStep
           pin={pin}
-          serviceTypeId={serviceTypeId}
           vehicleType={vehicle.type}
-          selectedId={garage?.id ?? ""}
+          value={garage}
           onSelect={(chosen) => {
             setGarage(chosen);
+            // Open days and pickup times depend on the garage.
             setDate("");
+            setPickupDraft({ ...pickupDraft, windowId: "" });
             setStep(4);
           }}
         />
       )}
 
-      {step === 4 && garage && (
+      {step === 4 && (
         <DateStep
-          garageId={garage.id}
+          garageId={chosenGarage?.id ?? null}
           selected={date}
           onSelect={(chosen) => {
             setDate(chosen);
@@ -151,12 +193,23 @@ export function BookingWizard({ vehicles, serviceTypes, pin, initial }: BookingW
         />
       )}
 
-      {step === 5 && vehicle && serviceType && garage && (
+      {step === 5 && (
+        <PickupDropStep
+          garage={chosenGarage}
+          addresses={addresses}
+          draft={pickupDraft}
+          onChange={setPickupDraft}
+        />
+      )}
+
+      {step === 6 && vehicle && pickupDrop !== undefined && (
         <BookingReview
           vehicle={vehicle}
-          serviceType={serviceType}
-          garage={garage}
+          servicePackage={servicePackage}
+          garage={chosenGarage}
           date={date}
+          pickupDrop={pickupDrop}
+          addresses={addresses}
           notes={notes}
           onNotesChange={setNotes}
         />
@@ -172,8 +225,13 @@ export function BookingWizard({ vehicles, serviceTypes, pin, initial }: BookingW
           <span />
         )}
         {step === 5 && (
-          <Button size="lg" disabled={isBooking} onClick={confirm}>
-            {isBooking ? "Sending…" : "Send booking"}
+          <Button size="lg" disabled={pickupDrop === undefined} onClick={() => setStep(6)}>
+            Continue
+          </Button>
+        )}
+        {step === 6 && (
+          <Button size="lg" disabled={isSending || !canSend} onClick={send}>
+            {isSending ? "Sending…" : "Book now"}
           </Button>
         )}
       </div>

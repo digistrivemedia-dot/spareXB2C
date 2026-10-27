@@ -1,16 +1,13 @@
 import {
   Bike,
-  CircleHelp,
+  CalendarPlus,
   Heart,
   House,
   type LucideIcon,
-  MapPin,
-  MapPinHouse,
-  MessageSquareText,
-  MonitorSmartphone,
   Package,
   ShoppingBag,
   UserRound,
+  Warehouse,
   Wrench,
 } from "lucide-react";
 
@@ -24,45 +21,84 @@ export type NavItem = {
 
 export type NavLink = Omit<NavItem, "icon">;
 
-/** The header's Shop / Service switch. Shop is the default, so every page outside Service shows it. */
-export const modeNav: NavItem[] = [
-  { label: "Shop", href: "/", icon: ShoppingBag },
-  { label: "Service", href: "/services", icon: Wrench },
+/** Profile, addresses, devices, help and enquiries all live under "My account". */
+const myAccountPages = [
+  "/account/profile",
+  "/account/addresses",
+  "/account/devices",
+  "/account/help",
+  "/account/enquiries",
 ];
 
-/** Mobile bottom navigation. */
+/** Mobile bottom navigation. A logged-in customer's Home is their own home page (/ sends them there). */
 export const mobileNav: NavItem[] = [
-  { label: "Home", href: "/", icon: House },
+  { label: "Home", href: "/", icon: House, alsoActiveFor: ["/account"] },
   { label: "Shop", href: "/products", icon: ShoppingBag },
-  { label: "Services", href: "/services", icon: Wrench },
+  { label: "Services", href: "/services", icon: Wrench, alsoActiveFor: ["/account/services"] },
   {
     label: "Orders",
     href: "/account/orders",
     icon: Package,
     alsoActiveFor: ["/account/returns"],
   },
-  { label: "Account", href: "/account", icon: UserRound },
+  {
+    label: "Account",
+    href: "/account/settings",
+    icon: UserRound,
+    alsoActiveFor: myAccountPages,
+  },
 ];
 
-/** Account sidebar (desktop) and account menu in the header. */
-export const accountNav: NavItem[] = [
-  { label: "Home", href: "/account", icon: House },
-  { label: "My vehicles", href: "/account/vehicles", icon: Bike },
-  { label: "Services", href: "/account/services", icon: Wrench },
+export type NavSection = {
+  /** Shown above the group in the sidebar; the first group has none. */
+  title?: string;
+  items: NavItem[];
+};
+
+/** Account sidebar (desktop), grouped. */
+export const accountNavSections: NavSection[] = [
   {
-    label: "Orders",
-    href: "/account/orders",
-    icon: Package,
-    alsoActiveFor: ["/account/returns"],
+    items: [
+      { label: "Home", href: "/account", icon: House },
+      { label: "My vehicles", href: "/account/vehicles", icon: Bike },
+    ],
   },
-  { label: "Saved", href: "/account/saved", icon: Heart },
-  { label: "Enquiries", href: "/account/enquiries", icon: MessageSquareText },
-  { label: "Garages", href: "/services/garages", icon: MapPin },
-  { label: "Profile", href: "/account/profile", icon: UserRound },
-  { label: "Addresses", href: "/account/addresses", icon: MapPinHouse },
-  { label: "Devices", href: "/account/devices", icon: MonitorSmartphone },
-  { label: "Help", href: "/account/help", icon: CircleHelp },
+  {
+    title: "Service",
+    items: [
+      { label: "Book a service", href: "/services/book", icon: CalendarPlus },
+      { label: "My services", href: "/account/services", icon: Wrench },
+      { label: "Favourite garages", href: "/account/garages", icon: Warehouse },
+    ],
+  },
+  {
+    title: "Shop",
+    items: [
+      { label: "Buy parts", href: "/products", icon: ShoppingBag },
+      {
+        label: "My orders",
+        href: "/account/orders",
+        icon: Package,
+        alsoActiveFor: ["/account/returns"],
+      },
+      { label: "Saved parts", href: "/account/saved", icon: Heart },
+    ],
+  },
+  {
+    title: "Account",
+    items: [
+      {
+        label: "My account",
+        href: "/account/settings",
+        icon: UserRound,
+        alsoActiveFor: myAccountPages,
+      },
+    ],
+  },
 ];
+
+/** The same links as one list: the account menu in the header, and working out the active page. */
+export const accountNav: NavItem[] = accountNavSections.flatMap((section) => section.items);
 
 export const footerNav: { title: string; links: NavLink[] }[] = [
   {

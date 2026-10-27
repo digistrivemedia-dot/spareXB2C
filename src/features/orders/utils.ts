@@ -130,3 +130,17 @@ export const cancelReasons = [
 export function isSameAddress(a: OrderAddress, b: OrderAddress): boolean {
   return (Object.keys(a) as (keyof OrderAddress)[]).every((key) => a[key] === b[key]);
 }
+
+// Paid for and on its way: the order the customer is waiting on.
+const inProgressStatuses: OrderStatus[] = [
+  "placed",
+  "confirmed",
+  "processing",
+  "packed",
+  "shipped",
+  "out-for-delivery",
+];
+
+export function isOrderInProgress(order: Order): boolean {
+  return inProgressStatuses.includes(order.status);
+}

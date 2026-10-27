@@ -6,12 +6,12 @@ import { SiteShell } from "@/components/layout/SiteShell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SessionGate } from "@/features/auth/components/SessionGate";
 
-/** Signed-in area: sidebar on desktop, the bottom nav does the job on mobile. */
+/** Signed-in area: a sidebar beside the page on desktop; the bottom nav does the job on mobile. */
 export default function AccountLayout({ children }: LayoutProps<"/account">) {
   return (
     <SiteShell>
-      <Container className="flex gap-8 py-6 lg:py-8">
-        <AccountSidebar className="hidden w-60 shrink-0 lg:block" />
+      <Container className="flex gap-6 py-6 lg:py-8">
+        <AccountSidebar className="hidden shrink-0 lg:block" />
         <div className="min-w-0 flex-1">
           <Suspense fallback={<Skeleton className="h-96 rounded-xl" />}>
             <SessionGate>{children}</SessionGate>

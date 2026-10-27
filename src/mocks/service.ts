@@ -1,3 +1,4 @@
+import type { Address } from "@/features/account/types";
 import { getSession } from "@/features/auth/session";
 import type { PaymentProof, PaymentSession } from "@/features/payments/types";
 import type {
@@ -7,8 +8,12 @@ import type {
   GarageQuery,
   GarageReview,
   GarageReviews,
+  JobAddress,
   NextServiceDue,
+  PickupDrop,
   ServiceJob,
+  ServicePackage,
+  ServiceRequest,
   EstimateLine,
   EstimateLineKind,
   ServiceBill,
@@ -17,8 +22,14 @@ import type {
   ServiceType,
   Weekday,
 } from "@/features/service/types";
+import {
+  GARAGE_ACCEPT_SECONDS,
+  getPickupWindowId,
+  getPickupWindows,
+} from "@/features/service/utils";
 import { getVehicleName } from "@/features/vehicles/utils";
 import { toIndianIsoDate } from "@/lib/format";
+import { addresses } from "@/mocks/account";
 import { mockVehicles } from "@/mocks/vehicles";
 
 // Opening days used by most garages.
@@ -367,6 +378,111 @@ const serviceTypes: ServiceType[] = serviceTypeDetails.map((type) => ({
   ),
 }));
 
+// Packages the admin sets per vehicle model, one price at every garage. Demo packages for the demo vehicles.
+const servicePackages: ServicePackage[] = [
+  {
+    id: "pkg-duke-200-periodic",
+    name: "Periodic service",
+    description: "The 5,000 km service KTM recommends for the Duke 200.",
+    priceInPaise: 2499_00,
+    duration: "3–4 hours",
+    includes: [
+      "Motul 10W-50 engine oil",
+      "Oil filter",
+      "Air filter clean",
+      "Chain clean and lube",
+      "Brake check",
+      "30-point check",
+    ],
+    modelIds: ["ktm-duke-200"],
+    isRoutine: true,
+  },
+  {
+    id: "pkg-duke-200-oil",
+    name: "Oil and filter change",
+    description: "Fresh fully synthetic oil and a genuine KTM oil filter.",
+    priceInPaise: 1399_00,
+    duration: "1 hour",
+    includes: ["Motul 10W-50 engine oil", "KTM oil filter", "Leak check"],
+    modelIds: ["ktm-duke-200"],
+    isRoutine: false,
+  },
+  {
+    id: "pkg-duke-200-brakes",
+    name: "Brake care",
+    description: "Front and rear brakes cleaned, checked and bled.",
+    priceInPaise: 899_00,
+    duration: "1–2 hours",
+    includes: ["Pad check and clean", "Brake fluid top-up", "Disc check"],
+    modelIds: ["ktm-duke-200"],
+    isRoutine: false,
+  },
+  {
+    id: "pkg-activa-6g-periodic",
+    name: "Periodic service",
+    description: "The 3,000 km service Honda recommends for the Activa 6G.",
+    priceInPaise: 999_00,
+    duration: "2–3 hours",
+    includes: ["Engine oil", "Air filter clean", "Spark plug check", "Brake adjustment", "Wash"],
+    modelIds: ["honda-activa-6g"],
+    isRoutine: true,
+  },
+  {
+    id: "pkg-activa-6g-oil",
+    name: "Oil change",
+    description: "Fresh engine oil, done while you wait.",
+    priceInPaise: 549_00,
+    duration: "45 minutes",
+    includes: ["Honda engine oil", "Oil level and leak check"],
+    modelIds: ["honda-activa-6g"],
+    isRoutine: false,
+  },
+  {
+    id: "pkg-swift-periodic",
+    name: "Periodic service",
+    description: "The 10,000 km service Maruti recommends for the Swift.",
+    priceInPaise: 4999_00,
+    duration: "5–6 hours",
+    includes: [
+      "Engine oil and oil filter",
+      "Air filter",
+      "AC filter clean",
+      "Brake check",
+      "Wheel alignment check",
+      "Car wash",
+    ],
+    modelIds: ["maruti-swift"],
+    isRoutine: true,
+  },
+  {
+    id: "pkg-swift-ac",
+    name: "AC care",
+    description: "AC gas check and top-up, cooling coil and filter cleaned.",
+    priceInPaise: 1999_00,
+    duration: "2–3 hours",
+    includes: ["AC gas check and top-up", "Cooling coil clean", "Cabin filter clean"],
+    modelIds: ["maruti-swift"],
+    isRoutine: false,
+  },
+];
+
+/** Which garage accepts in the demo, and how far into its turn. */
+const DEMO_ACCEPT_AFTER_MS = 2000;
+
+type StoredRequest = {
+  id: string;
+  input: BookServiceInput;
+  createdAt: number;
+  /** In the order they are asked. */
+  candidateIds: string[];
+  /** Index of the garage that accepts in the demo, or -1 when none does. */
+  acceptIndex: number;
+  isCancelled: boolean;
+  job: ServiceJob | null;
+};
+
+const requests: StoredRequest[] = [];
+
 const weekdays: Weekday[] = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const BOOKING_DAYS_AHEAD = 14;
 
@@ -401,6 +517,98 @@ const line = (
   decision: EstimateLine["decision"] = "approved",
 ): EstimateLine => ({ id, kind, description, amountInPaise: rupees * 100, decision });
 
+function toJobAddress({ label, name, mobile, line1, area, city, pin }: Address): JobAddress {
+  return { label, name, mobile, line1, area, city, pin };
+}
+
+function isOpenOn(g: Garage, date: string): boolean {
+  return g.openingHours.days.includes(weekdays[new Date(`${date}T12:00:00+05:30`).getUTCDay()]);
+}
+
+/** The job a garage takes on when it accepts a booking. */
+function createJob(input: BookServiceInput, garageId: string, requestedAt: string): ServiceJob {
+  const servicePackage = servicePackages.find((p) => p.id === input.packageId);
+  let pickupDrop: PickupDrop | null = null;
+  if (input.pickupDrop) {
+    const { windowId, pickupAddressId, dropAddressId } = input.pickupDrop;
+    const pickupAddress = addresses.find((a) => a.id === pickupAddressId) ?? addresses[0];
+    const dropAddress = addresses.find((a) => a.id === dropAddressId) ?? pickupAddress;
+    const [from, to] = windowId.split("-");
+    pickupDrop = {
+      window: { from, to },
+      pickupAddress: toJobAddress(pickupAddress),
+      dropAddress: toJobAddress(dropAddress),
+      // The garage assigns someone before the pickup day.
+      staff: null,
+    };
+  }
+  const serial = Math.max(...jobs.map((j) => Number(j.id.slice(-4)))) + 1;
+  return {
+    id: `job-2026-${serial}`,
+    jobCardNumber: `JC-2026-${serial}`,
+    vehicleId: input.vehicleId,
+    garage: garageRefOf(garageId),
+    serviceType: servicePackage?.name ?? "Check-up and repair",
+    stage: "booked",
+    history: [
+      { stage: "requested", at: requestedAt },
+      { stage: "booked", at: new Date().toISOString() },
+    ],
+    scheduledOn: input.date,
+    notes: input.notes,
+    pickupDrop,
+    closedReason: null,
+    checkIn: null,
+    estimates: [],
+    expectedReadyAt: null,
+    completion: null,
+    bill: null,
+    review: null,
+  };
+}
+
+/**
+ * Where a request stands, worked out from the time since it was sent: each garage gets its turn of
+ * GARAGE_ACCEPT_SECONDS, and the demo's accepting garage says yes a little into its turn.
+ */
+function toServiceRequest(request: StoredRequest): ServiceRequest {
+  const turnMs = GARAGE_ACCEPT_SECONDS * 1000;
+  const elapsed = Date.now() - request.createdAt;
+  const total = request.candidateIds.length;
+  const refOf = (index: number) => {
+    const { id, name } = garageRefOf(request.candidateIds[index]);
+    return { id, name };
+  };
+  const base = { id: request.id, totalGarages: total, expiresAt: null, job: null };
+
+  const acceptAt = request.acceptIndex * turnMs + DEMO_ACCEPT_AFTER_MS;
+  if (request.job || (!request.isCancelled && request.acceptIndex >= 0 && elapsed >= acceptAt)) {
+    if (!request.job) {
+      const garageId = request.candidateIds[request.acceptIndex];
+      request.job = createJob(request.input, garageId, new Date(request.createdAt).toISOString());
+      jobs.push(request.job);
+    }
+    return {
+      ...base,
+      status: "accepted",
+      attempt: request.acceptIndex + 1,
+      garage: refOf(request.acceptIndex),
+      job: request.job,
+    };
+  }
+  const index = Math.floor(elapsed / turnMs);
+  if (request.isCancelled)
+    return { ...base, status: "cancelled", attempt: Math.min(index + 1, total), garage: null };
+  if (index >= total) return { ...base, status: "no-garage", attempt: total, garage: null };
+  return {
+    ...base,
+    status: "searching",
+    attempt: index + 1,
+    garage: refOf(index),
+    expiresAt: new Date(request.createdAt + (index + 1) * turnMs).toISOString(),
+  };
+}
+
 // Demo data lives in memory, so bookings, decisions and payments last until the server restarts.
 const jobs: ServiceJob[] = [
   {
@@ -418,6 +626,7 @@ const jobs: ServiceJob[] = [
     ],
     scheduledOn: "2026-10-08",
     notes: "Front brake squeals and the clutch feels hard.",
+    pickupDrop: null,
     closedReason: null,
     checkIn: {
       at: "2026-10-08T10:15:00+05:30",
@@ -496,12 +705,19 @@ const jobs: ServiceJob[] = [
     history: [
       { stage: "requested", at: "2026-10-18T09:05:00+05:30" },
       { stage: "booked", at: "2026-10-18T09:30:00+05:30" },
+      { stage: "picked-up", at: "2026-10-21T09:35:00+05:30" },
       { stage: "inspected", at: "2026-10-21T10:20:00+05:30" },
       { stage: "in-service", at: "2026-10-21T10:45:00+05:30" },
       { stage: "ready", at: "2026-10-21T16:10:00+05:30" },
     ],
     scheduledOn: "2026-10-21",
     notes: "",
+    pickupDrop: {
+      window: { from: "09:00", to: "12:00" },
+      pickupAddress: toJobAddress(addresses[0]),
+      dropAddress: toJobAddress(addresses[0]),
+      staff: { name: "Manjunath S", phone: "9900112233" },
+    },
     closedReason: null,
     checkIn: {
       at: "2026-10-21T10:05:00+05:30",
@@ -586,6 +802,7 @@ const jobs: ServiceJob[] = [
     ],
     scheduledOn: "2026-10-20",
     notes: "",
+    pickupDrop: null,
     closedReason: "We're fully booked for washes that day. Please choose another day.",
     checkIn: null,
     estimates: [],
@@ -610,6 +827,7 @@ const jobs: ServiceJob[] = [
     ],
     scheduledOn: "2026-09-10",
     notes: "",
+    pickupDrop: null,
     closedReason: null,
     checkIn: null,
     estimates: [],
@@ -662,6 +880,7 @@ const jobs: ServiceJob[] = [
     ],
     scheduledOn: "2026-08-02",
     notes: "",
+    pickupDrop: null,
     closedReason: null,
     checkIn: null,
     estimates: [],
@@ -716,6 +935,7 @@ const jobs: ServiceJob[] = [
     ],
     scheduledOn: "2026-03-14",
     notes: "",
+    pickupDrop: null,
     closedReason: null,
     checkIn: null,
     estimates: [],
@@ -771,10 +991,12 @@ function toRecord(job: ServiceJob): ServiceRecord | null {
 const openStages: ServiceStage[] = [
   "requested",
   "booked",
+  "picked-up",
   "inspected",
   "awaiting-approval",
   "in-service",
   "ready",
+  "out-for-drop",
 ];
 
 const nextServices: NextServiceDue[] = [
@@ -793,20 +1015,24 @@ export const mockService = {
   },
 
   async getGarages({
+    ids,
     pin,
     serviceTypeId,
     vehicleType,
     minRating,
     openOnSunday,
+    openOn,
     sort = "distance",
   }: GarageQuery = {}): Promise<GarageOption[]> {
     const matching = garages
       .filter(
         (g) =>
+          (!ids || ids.includes(g.id)) &&
           (!serviceTypeId || g.services.some((s) => s.serviceTypeId === serviceTypeId)) &&
           (!vehicleType || g.vehicleTypes.includes(vehicleType)) &&
           (minRating === undefined || g.rating >= minRating) &&
-          (!openOnSunday || g.openingHours.days.includes("sun")),
+          (!openOnSunday || g.openingHours.days.includes("sun")) &&
+          (!openOn || isOpenOn(g, openOn)),
       )
       .map((g) => withDistance(g, pin));
     // Without a known PIN there are no distances, so the best rated come first.
@@ -832,47 +1058,68 @@ export const mockService = {
     };
   },
 
-  // The next two weeks, from tomorrow, on the days the garage is open.
-  async getBookableDates(garageId: string): Promise<string[]> {
-    const found = garages.find((g) => g.id === garageId);
-    if (!found) return [];
+  // The next two weeks, from tomorrow, on the days the garage (or, without one, any garage) is open.
+  async getBookableDates(garageId: string | null): Promise<string[]> {
+    const open = garageId ? garages.filter((g) => g.id === garageId) : garages;
     const dates: string[] = [];
     for (let offset = 1; offset <= BOOKING_DAYS_AHEAD; offset += 1) {
-      const date = new Date(Date.now() + offset * 24 * 60 * 60 * 1000);
-      if (found.openingHours.days.includes(weekdays[date.getUTCDay()])) {
-        dates.push(toIndianIsoDate(date));
-      }
+      const date = toIndianIsoDate(new Date(Date.now() + offset * 24 * 60 * 60 * 1000));
+      if (open.some((g) => isOpenOn(g, date))) dates.push(date);
     }
     return dates;
   },
 
-  async bookService(input: BookServiceInput): Promise<ServiceJob | null> {
-    const chosenGarage = garages.find((g) => g.id === input.garageId);
-    const serviceType = serviceTypes.find((t) => t.id === input.serviceTypeId);
-    if (!chosenGarage || !serviceType) return null;
+  async getServicePackages(modelId: string): Promise<ServicePackage[]> {
+    return servicePackages.filter((p) => p.modelIds.includes(modelId));
+  },
 
-    const serial = Math.max(...jobs.map((j) => Number(j.id.slice(-4)))) + 1;
-    const job: ServiceJob = {
-      id: `job-2026-${serial}`,
-      jobCardNumber: `JC-2026-${serial}`,
-      vehicleId: input.vehicleId,
-      garage: garageRefOf(chosenGarage.id),
-      serviceType: serviceType.name,
-      // The garage accepts or declines it from its own app.
-      stage: "requested",
-      history: [{ stage: "requested", at: new Date().toISOString() }],
-      scheduledOn: input.date,
-      notes: input.notes,
-      closedReason: null,
-      checkIn: null,
-      estimates: [],
-      expectedReadyAt: null,
-      completion: null,
-      bill: null,
-      review: null,
+  async requestService(input: BookServiceInput): Promise<ServiceRequest | null> {
+    const vehicle = await mockVehicles.getMyVehicle(input.vehicleId);
+    if (!vehicle) return null;
+    const pickupPin = addresses.find((a) => a.id === input.pickupDrop?.pickupAddressId)?.pin;
+    // Garages that can take it: work on this vehicle, open that day, and (with pick and drop) at that time.
+    const able = (
+      await mockService.getGarages({ vehicleType: vehicle.type, pin: pickupPin, sort: "rating" })
+    )
+      .filter((g) => isOpenOn(g, input.date))
+      .filter(
+        (g) =>
+          !input.pickupDrop ||
+          getPickupWindows(g).map(getPickupWindowId).includes(input.pickupDrop.windowId),
+      );
+    // "Best" is rating first, then distance; a chosen garage is asked first, then the best of the rest.
+    const best = able.sort(
+      (a, b) => b.rating - a.rating || (a.distanceKm ?? 0) - (b.distanceKm ?? 0),
+    );
+    const chosenId = input.garage.mode === "chosen" ? input.garage.garageId : null;
+    const candidateIds = [
+      ...(chosenId ? [chosenId] : []),
+      ...best.map((g) => g.id).filter((id) => id !== chosenId),
+    ].slice(0, 3);
+    const request: StoredRequest = {
+      id: `req-${Date.now()}`,
+      input,
+      createdAt: Date.now(),
+      candidateIds,
+      // Demo: a chosen garage accepts; with "best", the first garage lets it pass and the second accepts.
+      acceptIndex: Math.min(chosenId ? 0 : 1, candidateIds.length - 1),
+      isCancelled: false,
+      job: null,
     };
-    jobs.push(job);
-    return job;
+    requests.push(request);
+    return toServiceRequest(request);
+  },
+
+  async getServiceRequest(requestId: string): Promise<ServiceRequest | null> {
+    const request = requests.find((r) => r.id === requestId);
+    return request ? toServiceRequest(request) : null;
+  },
+
+  async cancelServiceRequest(requestId: string): Promise<ServiceRequest | null> {
+    const request = requests.find((r) => r.id === requestId);
+    if (!request || request.job) return null;
+    request.isCancelled = true;
+    return toServiceRequest(request);
   },
 
   async getServiceJob(jobId: string): Promise<ServiceJob | null> {

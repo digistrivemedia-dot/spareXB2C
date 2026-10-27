@@ -9,7 +9,7 @@ const steps = [
   {
     icon: Wrench,
     title: "Garage confirms",
-    text: "The garage accepts your booking. Bring your vehicle in during opening hours.",
+    text: "The garage accepts your booking. Bring your vehicle in, or choose free pick and drop.",
   },
   {
     icon: ClipboardCheck,

@@ -2,11 +2,12 @@
 
 import { refresh } from "next/cache";
 
+import { getAddress } from "@/features/account/api";
 import { getSession } from "@/features/auth/session";
 import type { PaymentProof, PaymentSession } from "@/features/payments/types";
 import {
-  bookService,
   cancelBooking,
+  cancelServiceRequest,
   choosePayAtGarage,
   confirmServicePayment,
   decideEstimate,
@@ -14,7 +15,10 @@ import {
   getGarage,
   getGarages,
   getServiceJob,
+  getServicePackages,
+  getServiceRequest,
   rateServiceVisit,
+  requestService,
   startServicePayment,
 } from "@/features/service/api";
 import {
@@ -26,9 +30,14 @@ import type {
   BookServiceInput,
   GarageOption,
   GarageQuery,
-  ServiceJob,
+  ServiceRequest,
 } from "@/features/service/types";
-import { canCancelBooking, cancelBookingReasons, getGaragePrice } from "@/features/service/utils";
+import {
+  canCancelBooking,
+  cancelBookingReasons,
+  getPickupWindowId,
+  getPickupWindows,
+} from "@/features/service/utils";
 import { getMyVehicle } from "@/features/vehicles/api";
 import type { ActionResult } from "@/lib/types";
 
@@ -39,7 +48,7 @@ export async function listGaragesAction(query: GarageQuery): Promise<GarageOptio
   return getGarages(query);
 }
 
-export async function listBookableDatesAction(garageId: string): Promise<string[]> {
+export async function listBookableDatesAction(garageId: string | null): Promise<string[]> {
   return getBookableDates(garageId);
 }
 
@@ -112,36 +121,68 @@ export async function rateServiceVisitAction(
   return { ok: true };
 }
 
-export async function bookServiceAction(
-  input: BookServiceInput,
-): Promise<{ ok: true; job: ServiceJob } | { ok: false; message: string }> {
+type RequestResult = { ok: true; request: ServiceRequest } | { ok: false; message: string };
+
+/** Checks the booking, then sends it out to garages. The wizard then follows it with `getServiceRequestAction`. */
+export async function requestServiceAction(input: BookServiceInput): Promise<RequestResult> {
   if (!(await getSession())) return { ok: false, message: "Please log in again to book." };
   const parsed = bookingSchema.safeParse(input);
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0].message };
 
-  const { vehicleId, serviceTypeId, garageId, date } = parsed.data;
+  const { vehicleId, packageId, date } = parsed.data;
+  const garageId = parsed.data.garage.mode === "chosen" ? parsed.data.garage.garageId : null;
   const [vehicle, garage, openDates] = await Promise.all([
     getMyVehicle(vehicleId),
-    getGarage(garageId),
+    garageId ? getGarage(garageId) : null,
     getBookableDates(garageId),
   ]);
-  if (!vehicle || !garage)
-    return { ok: false, message: "Please choose the vehicle and garage again." };
-  if (
-    getGaragePrice(garage, serviceTypeId) === null ||
-    !garage.vehicleTypes.includes(vehicle.type)
-  ) {
-    return { ok: false, message: "This garage doesn't do that service for your vehicle." };
+  if (!vehicle) return { ok: false, message: "Please choose the vehicle again." };
+  if (packageId) {
+    const packages = await getServicePackages(vehicle.modelId);
+    if (!packages.some((p) => p.id === packageId)) {
+      return { ok: false, message: "That package isn't available for your vehicle." };
+    }
+  }
+  if (garageId && (!garage || !garage.vehicleTypes.includes(vehicle.type))) {
+    return { ok: false, message: "This garage doesn't work on your vehicle. Please pick another." };
   }
   if (!openDates.includes(date)) {
-    return {
-      ok: false,
-      message: "The garage isn't taking bookings that day. Please pick another.",
-    };
+    return { ok: false, message: "That day isn't open for booking. Please pick another." };
   }
 
-  const job = await bookService(parsed.data);
-  return job
-    ? { ok: true, job }
-    : { ok: false, message: "We couldn't book this. Please try again." };
+  if (parsed.data.pickupDrop) {
+    const { windowId, pickupAddressId, dropAddressId } = parsed.data.pickupDrop;
+    if (!getPickupWindows(garage).map(getPickupWindowId).includes(windowId)) {
+      return { ok: false, message: "Please choose one of the pickup times." };
+    }
+    const [pickupAddress, dropAddress] = await Promise.all([
+      getAddress(pickupAddressId),
+      getAddress(dropAddressId),
+    ]);
+    if (!pickupAddress || !dropAddress) {
+      return { ok: false, message: "Please choose the pickup and drop addresses again." };
+    }
+  }
+
+  const request = await requestService(parsed.data);
+  return request
+    ? { ok: true, request }
+    : { ok: false, message: "We couldn't send this booking. Please try again." };
+}
+
+export async function getServiceRequestAction(requestId: string): Promise<RequestResult> {
+  if (!(await getSession())) return SIGNED_OUT;
+  const request = await getServiceRequest(requestId);
+  if (!request) return { ok: false, message: "We lost track of this booking. Please try again." };
+  // A garage accepted: the new booking shows on the account pages.
+  if (request.status === "accepted") refresh();
+  return { ok: true, request };
+}
+
+export async function cancelServiceRequestAction(requestId: string): Promise<RequestResult> {
+  if (!(await getSession())) return SIGNED_OUT;
+  const request = await cancelServiceRequest(requestId);
+  return request
+    ? { ok: true, request }
+    : { ok: false, message: "A garage has already accepted it. You can cancel it in My services." };
 }

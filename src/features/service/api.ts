@@ -6,7 +6,9 @@ import type {
   GarageReviews,
   NextServiceDue,
   ServiceJob,
+  ServicePackage,
   ServiceRecord,
+  ServiceRequest,
   ServiceType,
 } from "@/features/service/types";
 import type { PaymentProof, PaymentSession } from "@/features/payments/types";
@@ -111,7 +113,9 @@ export function getServiceTypes(): Promise<ServiceType[]> {
 
 /** Approved garages, filtered and sorted on the server: nearest first when there's a PIN. */
 export function getGarages(query: GarageQuery = {}): Promise<GarageOption[]> {
-  return useMock ? mockService.getGarages(query) : apiClient.get("/garages", query);
+  return useMock
+    ? mockService.getGarages(query)
+    : apiClient.get("/garages", { ...query, ids: query.ids?.join(",") });
 }
 
 /** One garage by its slug, with its distance from the PIN when given. */
@@ -127,15 +131,38 @@ export function getGarageReviews(garageId: string): Promise<GarageReviews | null
     : orNull(apiClient.get(`/garages/${garageId}/reviews`));
 }
 
-/** Days ("YYYY-MM-DD") the garage takes bookings: open days in the next two weeks. */
-export function getBookableDates(garageId: string): Promise<string[]> {
+/**
+ * Days ("YYYY-MM-DD") open for booking in the next two weeks: the garage's open days, or, without a garage
+ * (Kannali assigns one), days at least one garage is open.
+ */
+export function getBookableDates(garageId: string | null): Promise<string[]> {
   return useMock
     ? mockService.getBookableDates(garageId)
-    : apiClient.get(`/garages/${garageId}/bookable-dates`);
+    : apiClient.get("/bookable-dates", { garageId: garageId ?? undefined });
 }
 
-export function bookService(input: BookServiceInput): Promise<ServiceJob | null> {
+/** The service packages the admin has set for this vehicle model. */
+export function getServicePackages(modelId: string): Promise<ServicePackage[]> {
   return useMock
-    ? mockService.bookService(input)
-    : orNull(apiClient.post("/me/service-bookings", input));
+    ? mockService.getServicePackages(modelId)
+    : apiClient.get("/service-packages", { modelId });
+}
+
+/** Sends a booking out to garages; poll `getServiceRequest` until one accepts. */
+export function requestService(input: BookServiceInput): Promise<ServiceRequest | null> {
+  return useMock
+    ? mockService.requestService(input)
+    : orNull(apiClient.post("/me/service-requests", input));
+}
+
+export function getServiceRequest(requestId: string): Promise<ServiceRequest | null> {
+  return useMock
+    ? mockService.getServiceRequest(requestId)
+    : orNull(apiClient.get(`/me/service-requests/${requestId}`));
+}
+
+export function cancelServiceRequest(requestId: string): Promise<ServiceRequest | null> {
+  return useMock
+    ? mockService.cancelServiceRequest(requestId)
+    : orNull(apiClient.post(`/me/service-requests/${requestId}/cancel`));
 }

@@ -14,11 +14,28 @@ type StepperProps = {
   activeStep: number;
   /** "attention" highlights the active step in the action colour, e.g. when it waits on the customer. */
   activeTone?: "progress" | "attention";
+  /** "success" draws finished steps in green instead of navy. */
+  doneTone?: "progress" | "success";
+  /** Shown under the step in progress, e.g. the button for what the customer has to do next. */
+  activeContent?: React.ReactNode;
   label: string;
 };
 
+const doneClasses = {
+  progress: { circle: "bg-navy-700 text-white", line: "bg-navy-600" },
+  success: { circle: "bg-success-600 text-white", line: "bg-success-600" },
+};
+
 /** Progress through ordered steps: vertical on phones, horizontal from tablets up. */
-export function Stepper({ steps, activeStep, activeTone = "progress", label }: StepperProps) {
+export function Stepper({
+  steps,
+  activeStep,
+  activeTone = "progress",
+  doneTone = "progress",
+  activeContent,
+  label,
+}: StepperProps) {
+  const done = doneClasses[doneTone];
   return (
     <ol aria-label={label} className="flex flex-col md:flex-row">
       {steps.map((step, index) => {
@@ -38,13 +55,13 @@ export function Stepper({ steps, activeStep, activeTone = "progress", label }: S
                 className={cn(
                   "hidden h-0.5 flex-1 md:block",
                   index === 0 && "invisible",
-                  index <= activeStep ? "bg-navy-600" : "bg-gray-200",
+                  index <= activeStep ? done.line : "bg-gray-200",
                 )}
               />
               <span
                 className={cn(
                   "flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
-                  isDone && "bg-navy-700 text-white",
+                  isDone && done.circle,
                   isActive &&
                     (activeTone === "attention"
                       ? "bg-orange-700 text-white ring-4 ring-orange-100"
@@ -58,7 +75,7 @@ export function Stepper({ steps, activeStep, activeTone = "progress", label }: S
                 className={cn(
                   "min-h-6 w-0.5 flex-1 md:h-0.5 md:min-h-0 md:w-auto",
                   isLast && "invisible",
-                  isDone ? "bg-navy-600" : "bg-gray-200",
+                  isDone ? done.line : "bg-gray-200",
                 )}
               />
             </div>
@@ -76,6 +93,11 @@ export function Stepper({ steps, activeStep, activeTone = "progress", label }: S
                 </span>
               </p>
               {step.detail && <p className="mt-0.5 text-xs text-gray-500">{step.detail}</p>}
+              {isActive && activeContent && (
+                <div className="mt-2 grid justify-items-start gap-2 md:justify-items-center">
+                  {activeContent}
+                </div>
+              )}
             </div>
           </li>
         );

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { PageHeader } from "@/components/layout/PageHeader";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getAddresses } from "@/features/account/api";
@@ -15,6 +16,9 @@ export default async function AddressesPage() {
 
   return (
     <div className="grid grid-cols-1 gap-6">
+      <Breadcrumb
+        items={[{ label: "My account", href: "/account/settings" }, { label: "Addresses" }]}
+      />
       <PageHeader
         title="Your addresses"
         description="Choose one at checkout. Your default address is picked for you."

@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { toast } from "sonner";
 
@@ -23,6 +24,8 @@ export function VehicleSwitcher({ myVehicles, catalog }: VehicleSwitcherProps) {
   const selectedVehicle = useVehicleStore((state) => state.selectedVehicle);
   const hasHydrated = useVehicleStore((state) => state.hasHydrated);
   const selectVehicle = useVehicleStore((state) => state.selectVehicle);
+  const pathname = usePathname();
+  const router = useRouter();
 
   // A signed-in customer starts with their default vehicle selected.
   useEffect(() => {
@@ -34,6 +37,10 @@ export function VehicleSwitcher({ myVehicles, catalog }: VehicleSwitcherProps) {
   function choose(vehicle: SelectedVehicle) {
     selectVehicle(vehicle);
     setOpen(false);
+    // The home page is about one of the customer's vehicles; switching here switches it too.
+    if (pathname === "/account" && vehicle.myVehicleId) {
+      router.replace(`/account?vehicle=${vehicle.myVehicleId}`, { scroll: false });
+    }
     toast.success(`Showing parts for your ${getVehicleName(vehicle)}`);
   }
 

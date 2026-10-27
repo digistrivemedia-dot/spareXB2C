@@ -6,13 +6,14 @@ import {
   Clock,
   IndianRupee,
   type LucideIcon,
+  Truck,
   Wrench,
 } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import type { ServiceJob } from "@/features/service/types";
-import { getEstimateTotal, getPendingEstimate } from "@/features/service/utils";
+import { formatPickupWindow, getEstimateTotal, getPendingEstimate } from "@/features/service/utils";
 import { formatDateTime, formatDay, formatPrice } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -37,19 +38,39 @@ export function ServiceJobNotice({ job }: { job: ServiceJob }) {
   const day = formatDay(new Date(`${job.scheduledOn}T12:00:00+05:30`));
   const base = `/account/services/${job.id}`;
   const estimate = getPendingEstimate(job);
+  const pickupDrop = job.pickupDrop;
+  const staff = pickupDrop?.staff;
+  const staffName = staff?.name ?? "Someone from the garage";
+  const callStaff = staff
+    ? { href: `tel:+91${staff.phone}`, label: `Call ${staff.name.split(" ")[0]}` }
+    : undefined;
+  const isPaid = job.bill?.payment.status === "paid";
+  const pickedUpAt = job.history.findLast((event) => event.stage === "picked-up")?.at;
 
   const notices: Record<ServiceJob["stage"], Notice> = {
     requested: {
       icon: Clock,
       tone: "warning",
       title: `Waiting for ${job.garage.name} to confirm`,
-      text: `You asked for ${day}. We'll show it here as soon as the garage accepts.`,
+      text: pickupDrop
+        ? `You asked for pickup on ${day}, ${formatPickupWindow(pickupDrop.window)}. We'll show it here as soon as the garage accepts.`
+        : `You asked for ${day}. We'll show it here as soon as the garage accepts.`,
     },
     booked: {
       icon: CalendarCheck,
       tone: "info",
       title: `Booked for ${day}`,
-      text: "Bring your vehicle in any time during the garage's opening hours that day.",
+      text: pickupDrop
+        ? `${staffName} will pick up your vehicle between ${formatPickupWindow(pickupDrop.window)} from ${pickupDrop.pickupAddress.area}.`
+        : "Bring your vehicle in any time during the garage's opening hours that day.",
+      action: callStaff,
+    },
+    "picked-up": {
+      icon: Truck,
+      tone: "info",
+      title: "Picked up, on the way to the garage",
+      text: `${staffName} collected your vehicle${pickedUpAt ? ` at ${formatDateTime(pickedUpAt)}` : ""}.`,
+      action: callStaff,
     },
     inspected: {
       icon: Wrench,
@@ -78,13 +99,24 @@ export function ServiceJobNotice({ job }: { job: ServiceJob }) {
     ready: {
       icon: IndianRupee,
       tone: "success",
-      title: "Ready to collect",
-      text:
-        job.bill?.payment.status === "paid"
+      title: pickupDrop ? "Ready. The garage will drop it off soon" : "Ready to collect",
+      text: pickupDrop
+        ? isPaid
+          ? `Paid. ${staffName} will bring it to ${pickupDrop.dropAddress.area}.`
+          : `Pay ${formatPrice(job.bill?.totalInPaise ?? 0)} online now, or pay the garage's staff at drop-off.`
+        : isPaid
           ? "Paid. Collect your vehicle during opening hours."
           : `Pay ${formatPrice(job.bill?.totalInPaise ?? 0)} online now, or at the garage when you collect.`,
-      action:
-        job.bill?.payment.status === "paid" ? undefined : { href: `${base}/pay`, label: "Pay now" },
+      action: isPaid ? undefined : { href: `${base}/pay`, label: "Pay now" },
+    },
+    "out-for-drop": {
+      icon: Truck,
+      tone: "info",
+      title: "Out for drop",
+      text: `${staffName} is bringing your vehicle to ${pickupDrop?.dropAddress.area ?? "you"}.${
+        isPaid ? "" : ` Pay ${formatPrice(job.bill?.totalInPaise ?? 0)} online now, or at drop-off.`
+      }`,
+      action: isPaid ? callStaff : { href: `${base}/pay`, label: "Pay now" },
     },
     delivered: {
       icon: CircleCheck,

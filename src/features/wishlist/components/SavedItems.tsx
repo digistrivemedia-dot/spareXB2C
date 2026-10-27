@@ -15,11 +15,11 @@ import { useWishlistStore } from "@/features/wishlist/store";
 
 /** The parts the customer saved with the heart, saved in this browser for now. */
 export function SavedItems() {
-  const productIds = useWishlistStore((state) => state.productIds);
+  const productIds = useWishlistStore((state) => state.ids);
   const hasHydrated = useWishlistStore((state) => state.hasHydrated);
   // Fetched once the saved list loads. Un-saving only hides the card, so the grid doesn't reload.
   const query = useMemo<ProductQuery | null>(() => {
-    const ids = hasHydrated ? useWishlistStore.getState().productIds : [];
+    const ids = hasHydrated ? useWishlistStore.getState().ids : [];
     return ids.length > 0 ? { ids, pageSize: 100 } : null;
   }, [hasHydrated]);
   const products = useProducts(query);

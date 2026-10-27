@@ -1,12 +1,12 @@
 import { cookies } from "next/headers";
 import { cache } from "react";
 
+import { SESSION_COOKIE } from "@/features/auth/session-cookie";
 import type { Session } from "@/features/auth/types";
 import { ApiError, apiClient } from "@/lib/api-client";
 import { dataSource } from "@/lib/config";
 import { mockAuth } from "@/mocks/auth";
 
-const SESSION_COOKIE = "kg_session";
 const THIRTY_DAYS_IN_SECONDS = 30 * 24 * 60 * 60;
 
 /**

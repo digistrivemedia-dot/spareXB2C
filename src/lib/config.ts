@@ -27,3 +27,7 @@ export const features = {
 } as const;
 
 export const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+
+/** SpareX Business (B2B) login. Business members are sent here from the login page's Business tab. */
+export const b2bLoginUrl =
+  process.env.NEXT_PUBLIC_B2B_LOGIN_URL ?? "https://spare-x-b2b.vercel.app/login";

@@ -8,11 +8,18 @@ type VehiclePhotoProps = {
   vehicle: Pick<MyVehicle, "type" | "photos">;
   /** The `sizes` hint for next/image, matching how wide the photo is drawn. */
   sizes: string;
+  /** Load straight away, for a photo at the top of the page (it is often the largest thing on screen). */
+  isAboveFold?: boolean;
   className?: string;
 };
 
 /** The vehicle's main photo (4:3), or its type's icon on grey until the customer adds one. */
-export function VehiclePhoto({ vehicle, sizes, className }: VehiclePhotoProps) {
+export function VehiclePhoto({
+  vehicle,
+  sizes,
+  isAboveFold = false,
+  className,
+}: VehiclePhotoProps) {
   const photo = vehicle.photos[0];
   return (
     <div
@@ -22,7 +29,14 @@ export function VehiclePhoto({ vehicle, sizes, className }: VehiclePhotoProps) {
       )}
     >
       {photo ? (
-        <Image src={photo.url} alt={photo.alt} fill sizes={sizes} className="object-cover" />
+        <Image
+          src={photo.url}
+          alt={photo.alt}
+          fill
+          sizes={sizes}
+          loading={isAboveFold ? "eager" : undefined}
+          className="object-cover"
+        />
       ) : (
         <VehicleTypeIcon type={vehicle.type} className="size-1/3" strokeWidth={1.5} />
       )}

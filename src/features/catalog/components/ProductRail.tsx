@@ -11,7 +11,15 @@ import { ProductCard } from "@/features/catalog/components/ProductCard";
 import type { ProductSummary } from "@/features/catalog/types";
 
 /** A swipeable row of product cards; arrows on larger screens. */
-export function ProductRail({ products, label }: { products: ProductSummary[]; label: string }) {
+type ProductRailProps = {
+  products: ProductSummary[];
+  label: string;
+  variant?: "default" | "compact";
+  /** Labels over some cards, by product id. */
+  tags?: Record<string, string>;
+};
+
+export function ProductRail({ products, label, variant = "default", tags }: ProductRailProps) {
   return (
     <Carousel opts={{ align: "start" }} aria-label={label}>
       <CarouselContent>
@@ -20,7 +28,7 @@ export function ProductRail({ products, label }: { products: ProductSummary[]; l
             key={product.id}
             className="basis-5/11 sm:basis-1/3 md:basis-1/4 xl:basis-1/5"
           >
-            <ProductCard product={product} />
+            <ProductCard product={product} variant={variant} tag={tags?.[product.id]} />
           </CarouselItem>
         ))}
       </CarouselContent>

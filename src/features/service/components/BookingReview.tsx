@@ -1,43 +1,68 @@
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { GarageOption, ServiceType } from "@/features/service/types";
-import { formatDistance, getGaragePrice } from "@/features/service/utils";
+import type { Address } from "@/features/account/types";
+import type { BookServiceInput, GarageOption, ServicePackage } from "@/features/service/types";
+import { formatDistance, formatPickupWindow } from "@/features/service/utils";
 import type { MyVehicle } from "@/features/vehicles/types";
 import { formatPlate, getVehicleName } from "@/features/vehicles/utils";
 import { formatDay, formatPrice } from "@/lib/format";
 
 type BookingReviewProps = {
   vehicle: MyVehicle;
-  serviceType: ServiceType;
-  garage: GarageOption;
+  /** Null when the customer described a problem instead. */
+  servicePackage: ServicePackage | null;
+  /** Null when Kannali assigns the best garage. */
+  garage: GarageOption | null;
   date: string;
+  pickupDrop: BookServiceInput["pickupDrop"];
+  addresses: Address[];
   notes: string;
   onNotesChange: (notes: string) => void;
 };
 
 /** Everything chosen, one last time, with room for a note to the mechanic. */
 export function BookingReview(props: BookingReviewProps) {
-  const { vehicle, serviceType, garage, date, notes, onNotesChange } = props;
-  const price = getGaragePrice(garage, serviceType.id) ?? serviceType.fromPriceInPaise;
+  const { vehicle, servicePackage, garage, date, pickupDrop, addresses, notes, onNotesChange } =
+    props;
+  const day = formatDay(new Date(`${date}T12:00:00+05:30`));
+  const addressText = (id: string) => {
+    const address = addresses.find((a) => a.id === id);
+    return address ? `${address.label}: ${address.line1}, ${address.area}` : "";
+  };
+  const [from, to] = pickupDrop?.windowId.split("-") ?? [];
   const rows = [
     {
       label: "Vehicle",
       value: `${getVehicleName(vehicle)} · ${formatPlate(vehicle.registrationNumber)}`,
     },
-    { label: "Service", value: `${serviceType.name} · from ${formatPrice(price)}` },
+    {
+      label: "Service",
+      value: servicePackage
+        ? `${servicePackage.name} · ${formatPrice(servicePackage.priceInPaise)}`
+        : "Check-up and repair · the garage quotes after inspecting",
+    },
     {
       label: "Garage",
-      value: [
-        garage.name,
-        garage.distanceKm !== null && `${formatDistance(garage.distanceKm)} away`,
-      ]
-        .filter(Boolean)
-        .join(" · "),
+      value: garage
+        ? [garage.name, garage.distanceKm !== null && `${formatDistance(garage.distanceKm)} away`]
+            .filter(Boolean)
+            .join(" · ")
+        : "Best garage for you, assigned when you send",
     },
-    {
-      label: "Day",
-      value: `${formatDay(new Date(`${date}T12:00:00+05:30`))}, during opening hours`,
-    },
+    ...(pickupDrop
+      ? [
+          { label: "Pickup", value: `${day}, ${formatPickupWindow({ from, to })}` },
+          { label: "Pick up from", value: addressText(pickupDrop.pickupAddressId) },
+          {
+            label: "Drop at",
+            value:
+              pickupDrop.dropAddressId === pickupDrop.pickupAddressId
+                ? "The same address"
+                : addressText(pickupDrop.dropAddressId),
+          },
+          { label: "Pick and drop", value: "Free" },
+        ]
+      : [{ label: "Day", value: `${day}, bring it in during opening hours` }]),
     { label: "To pay now", value: "Nothing. You pay after the work, online or at the garage." },
   ];
 
@@ -52,7 +77,11 @@ export function BookingReview(props: BookingReviewProps) {
         ))}
       </dl>
       <div className="grid gap-2">
-        <Label htmlFor="booking-notes">Anything the mechanic should know? (optional)</Label>
+        <Label htmlFor="booking-notes">
+          {servicePackage
+            ? "Anything the mechanic should know? (optional)"
+            : "What's wrong with the vehicle?"}
+        </Label>
         <Textarea
           id="booking-notes"
           value={notes}
@@ -62,8 +91,8 @@ export function BookingReview(props: BookingReviewProps) {
         />
       </div>
       <p className="text-xs text-gray-500">
-        The final bill depends on the work and parts needed. The garage sends an estimate for your
-        approval before any extra work.
+        Parts or work beyond the package come as an estimate for your approval. Nothing extra is
+        done without your OK.
       </p>
     </div>
   );

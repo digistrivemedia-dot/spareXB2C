@@ -11,6 +11,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Stepper } from "@/components/ui/Stepper";
 import { getServiceJob } from "@/features/service/api";
 import { CancelBookingDialog } from "@/features/service/components/CancelBookingDialog";
+import { PickupDropCard } from "@/features/service/components/PickupDropCard";
 import { RateVisitDialog } from "@/features/service/components/RateVisitDialog";
 import { ServiceJobDocuments } from "@/features/service/components/ServiceJobDocuments";
 import { ServiceJobNotice } from "@/features/service/components/ServiceJobNotice";
@@ -41,7 +42,10 @@ export default async function ServiceJobPage({ params }: PageProps<"/account/ser
         : "Removed vehicle",
     },
     { label: "Service", value: job.serviceType },
-    { label: "Day", value: formatDay(new Date(`${job.scheduledOn}T12:00:00+05:30`)) },
+    {
+      label: job.pickupDrop ? "Day" : "Day (you bring it in)",
+      value: formatDay(new Date(`${job.scheduledOn}T12:00:00+05:30`)),
+    },
     ...(job.notes ? [{ label: "Your note", value: job.notes }] : []),
   ];
 
@@ -98,6 +102,7 @@ export default async function ServiceJobPage({ params }: PageProps<"/account/ser
             </a>
           </Button>
         </Card>
+        {job.pickupDrop && <PickupDropCard job={{ ...job, pickupDrop: job.pickupDrop }} />}
         <ServiceJobDocuments job={job} />
       </div>
 

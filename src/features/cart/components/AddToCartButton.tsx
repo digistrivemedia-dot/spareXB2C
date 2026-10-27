@@ -8,11 +8,32 @@ import type { ProductSummary } from "@/features/catalog/types";
 
 type AddToCartButtonProps = {
   product: ProductSummary;
+  /** "icon" is a small cart button for compact cards. */
+  size?: "default" | "icon";
   className?: string;
 };
 
-export function AddToCartButton({ product, className }: AddToCartButtonProps) {
+export function AddToCartButton({ product, size = "default", className }: AddToCartButtonProps) {
   const addToCart = useAddToCart();
+
+  if (size === "icon") {
+    return (
+      <Button
+        size="icon"
+        variant="secondary"
+        onClick={() => addToCart(product)}
+        disabled={product.stockQuantity === 0}
+        aria-label={
+          product.stockQuantity === 0
+            ? `${product.name} is out of stock`
+            : `Add ${product.name} to cart`
+        }
+        className={className}
+      >
+        <ShoppingCart aria-hidden />
+      </Button>
+    );
+  }
 
   if (product.stockQuantity === 0) {
     return (

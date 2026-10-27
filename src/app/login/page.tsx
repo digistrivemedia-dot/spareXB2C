@@ -4,13 +4,14 @@ import { redirect } from "next/navigation";
 import { Logo } from "@/components/layout/Logo";
 import { getSession } from "@/features/auth/session";
 import { BrandPanel } from "@/features/auth/components/BrandPanel";
-import { LoginFlow } from "@/features/auth/components/LoginFlow";
+import { LoginChooser } from "@/features/auth/components/LoginChooser";
 import { safeNextPath } from "@/features/auth/utils";
 import { getSearchParam } from "@/lib/search-params";
 
 export const metadata: Metadata = {
   title: "Log in",
-  description: "Log in or sign up to Kannali Garage with your mobile number.",
+  description:
+    "Customers log in or sign up with their mobile number. Business members log in to SpareX Business.",
 };
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
@@ -26,7 +27,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         </div>
         <div className="flex flex-1 items-start justify-center px-4 py-10 sm:items-center">
           <div className="w-full max-w-sm">
-            <LoginFlow next={next} />
+            <LoginChooser next={next} />
           </div>
         </div>
       </main>

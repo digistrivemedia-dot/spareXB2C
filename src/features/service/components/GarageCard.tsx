@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Rating } from "@/components/ui/Rating";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { FavouriteGarageButton } from "@/features/service/components/FavouriteGarageButton";
 import type { GarageOption } from "@/features/service/types";
 import { formatDistance, formatOpeningHours, getGaragePrice } from "@/features/service/utils";
 import { describeVehicleTypes } from "@/features/vehicles/utils";
@@ -43,6 +44,11 @@ export function GarageCard({ garage, serviceTypeId, serviceName }: GarageCardPro
         ) : (
           <Wrench className="size-1/4" strokeWidth={1.5} aria-hidden />
         )}
+        <FavouriteGarageButton
+          garageId={garage.id}
+          garageName={garage.name}
+          className="absolute top-2 right-2"
+        />
       </div>
       <div className="flex flex-1 flex-col gap-2 p-4 md:p-5">
         <div className="flex flex-wrap items-center gap-2">
